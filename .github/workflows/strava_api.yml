@@ -1,0 +1,38 @@
+name: Strava API Interaction
+
+on:
+  push:
+    branches:
+      - main  # or your default branch
+  workflow_dispatch:  # This line allows manual triggering
+
+
+jobs:
+  strava_api_interaction:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Strava API Interaction
+        run: python .github/scripts/strava_api.py
+        env:
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+    
+      - name: Check API Authentication
+        run: |
+          curl -G https://www.strava.com/api/v3/athlete -H "Authorization: Bearer ${{ secrets.STRAVA_ACCESS_TOKEN }}"
