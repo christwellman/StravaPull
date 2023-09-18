@@ -25,7 +25,7 @@ jobs:
           pip install requests pandas
 
       - name: Run Script
-        run: python .github/GetStrava.py
+        run: python GetStrava.py
         env:
           STRAVA_CLIENT_ID: ${{ secrets.CLIENT_ID }}
           STRAVA_CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
