@@ -32,3 +32,11 @@ jobs:
           STRAVA_CLIENT_ID: ${{ secrets.CLIENT_ID }}
           STRAVA_CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
           STRAVA_REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+
+      - name: Commit and push
+        run: |
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add data/*
+            git commit -m "Add data files" -a
+            git push
