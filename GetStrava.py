@@ -17,6 +17,10 @@ import requests
 if not os.path.exists('./data'):
     os.makedirs('./data')
 
+with open('./data/test_file.txt', 'w') as file:
+    file.write('This is a test.')
+
+
 # Define logfile
 LOG_FILENAME = datetime.now().strftime('./logs/GetStravaData_%a.log')
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
