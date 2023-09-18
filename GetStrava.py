@@ -14,6 +14,9 @@ from distutils.log import debug
 import pandas as pd
 import requests
 
+if not os.path.exists('./data'):
+    os.makedirs('./data')
+
 # Define logfile
 LOG_FILENAME = datetime.now().strftime('./logs/GetStravaData_%a.log')
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
