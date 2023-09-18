@@ -35,4 +35,4 @@ jobs:
     
       - name: Check API Authentication
         run: |
-          curl -G https://www.strava.com/api/v3/athlete -H "Authorization: Bearer ${{ secrets.STRAVA_ACCESS_TOKEN }}"
+           curl -G https://www.strava.com/api/v3/athlete -H "Authorization: Bearer ${{ secrets.ACCESS_TOKEN }}"
