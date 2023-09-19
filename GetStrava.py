@@ -118,22 +118,24 @@ import json
 credentials_json = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
 print(credentials_json)
 
-credentials_json = credentials_json.replace('\n', '\\n')
+if credentials_json:
+    credentials_json = credentials_json.replace('\n', '\\n')
+    credentials_json = credentials_json.replace("'", '"')
+    try:
+        # Now try to convert the modified string to a dictionary
+        credentials_json_dict = json.loads(credentials_json)
+        # credentials_json_dict = credentials_json
+        # Use credentials to authenticate with the Google Sheets API
+        scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/drive']
+        credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_json_dict, scope)
+        client = gspread.authorize(credentials)
 
-try:
-    # Now try to convert the modified string to a dictionary
-    credentials_json_dict = json.loads(credentials_json)
-    # credentials_json_dict = credentials_json
-    # Use credentials to authenticate with the Google Sheets API
-    scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/drive']
-    credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_json_dict, scope)
-    client = gspread.authorize(credentials)
-
-except json.JSONDecodeError as e:
-    print(f"JSON Decode Error: {e}")
-except Exception as e:
-    print(f"An error occurred: {e}")
-
+    except json.JSONDecodeError as e:
+        print(f"JSON Decode Error: {e}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+else:
+    print("credentials_json is None")
 
 
 # Open the Google Sheets document
