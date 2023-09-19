@@ -116,8 +116,17 @@ import json
 
 # Load credentials from environment variable (GitHub secret)
 credentials_json = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
-credentials_json_dict = json.loads(credentials_json)  # Convert string to dictionary
+print(credentials_json)
 
+credentials_json = credentials_json.replace('\n', '\\n')
+
+try:
+    # Now try to convert the modified string to a dictionary
+    credentials_json_dict = json.loads(credentials_json)
+except json.JSONDecodeError as e:
+    # If there's still an error, print it to get more information
+    print(f"JSON Decode Error: {e}")
+    
 # Use credentials to authenticate with the Google Sheets API
 scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/drive']
 credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_json_dict, scope)
@@ -131,8 +140,8 @@ sheet = client.open_by_key(spreadsheet_key).sheet1
 elevation_leaderboard_records = activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='total_elevation_gain',ascending=False).to_dict('records')
 distance_leaderboard_records = activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='distance',ascending=False).to_dict('records')
 
-# Clear existing data in the sheets (if you want to)
-sheet.clear()
+# Clear existing data in the sheets ?
+# sheet.clear()
 
 # Upload new data to Google Sheets
 sheet.insert_rows(elevation_leaderboard_records, 1)
