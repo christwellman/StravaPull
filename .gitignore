@@ -1,0 +1,14 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+
+# Distribution / packaging
+.Python
+lib/
+lib64/
+MANIFEST
+
+# pyenv
+venv_StravaPull/
+
+# DS_Store
+.DS_Store

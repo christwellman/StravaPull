@@ -11,15 +11,14 @@ import time
 from datetime import datetime
 from distutils.log import debug
 
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
 import pandas as pd
 import requests
 
 if not os.path.exists('./data'):
     os.makedirs('./data')
-
-with open('./data/test_file.txt', 'w') as file:
-    file.write('This is a test.')
-
 
 # Define logfile
 LOG_FILENAME = datetime.now().strftime('./logs/GetStravaData_%a.log')
@@ -109,6 +108,29 @@ logging.info('Distnace Leaderboard')
 logging.info(activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='distance',ascending=False))
 # print("Creating HD_Distance_Leaderboard.csv...")
 activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='distance',ascending=False).to_csv('./data/HD_Distance_Leaderboard.csv', header=False)
+# # -- ------------------------------------------------------------------------------------------------------
+# Load credentials from environment variable (GitHub secret)
+credentials_json = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
+
+# Use credentials to authenticate with the Google Sheets API
+scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/drive']
+credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_json, scope)
+client = gspread.authorize(credentials)
+
+# Open the Google Sheets document
+spreadsheet_key = '1416YvyZiCqt3AF2LaAhguj4jLxnkXQIBdFbHsRcX32Y'  # From the URL of your Google Sheets document
+sheet = client.open_by_key(spreadsheet_key).sheet1
+
+# Convert your data frames to records (list of dictionaries) for easy uploading
+elevation_leaderboard_records = activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='total_elevation_gain',ascending=False).to_dict('records')
+distance_leaderboard_records = activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='distance',ascending=False).to_dict('records')
+
+# Clear existing data in the sheets (if you want to)
+sheet.clear()
+
+# Upload new data to Google Sheets
+sheet.insert_rows(elevation_leaderboard_records, 1)
+# If you have multiple sheet
 
 # # -- ------------------------------------------------------------------------------------------------------
 # #Get athlete club
