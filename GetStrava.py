@@ -128,6 +128,8 @@ try:
     scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/drive']
     credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_json_dict, scope)
     client = gspread.authorize(credentials)
+except Exception as e:
+    print(f"An error occurred: {e}")
 except json.JSONDecodeError as e:
     # If there's still an error, print it to get more information
     print(f"JSON Decode Error: {e}")
