@@ -123,14 +123,16 @@ credentials_json = credentials_json.replace('\n', '\\n')
 try:
     # Now try to convert the modified string to a dictionary
     credentials_json_dict = json.loads(credentials_json)
+
+    # Use credentials to authenticate with the Google Sheets API
+    scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/drive']
+    credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_json_dict, scope)
+    client = gspread.authorize(credentials)
 except json.JSONDecodeError as e:
     # If there's still an error, print it to get more information
     print(f"JSON Decode Error: {e}")
-    
-# Use credentials to authenticate with the Google Sheets API
-scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/drive']
-credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_json_dict, scope)
-client = gspread.authorize(credentials)
+
+
 
 # Open the Google Sheets document
 spreadsheet_key = '1416YvyZiCqt3AF2LaAhguj4jLxnkXQIBdFbHsRcX32Y'  # From the URL of your Google Sheets document
