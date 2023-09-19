@@ -1,4 +1,4 @@
-name: Run Strava Data Script
+name: Refresh Strava Data Action
 
 on:
   schedule:
