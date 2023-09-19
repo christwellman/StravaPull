@@ -110,11 +110,17 @@ logging.info(activities[['name','start_date_local','distance','total_elevation_g
 activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='distance',ascending=False).to_csv('./data/HD_Distance_Leaderboard.csv', header=False)
 # # -- ------------------------------------------------------------------------------------------------------
 # Load credentials from environment variable (GitHub secret)
+import json
+
+# ... other parts of your script
+
+# Load credentials from environment variable (GitHub secret)
 credentials_json = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
+credentials_json_dict = json.loads(credentials_json)  # Convert string to dictionary
 
 # Use credentials to authenticate with the Google Sheets API
 scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/drive']
-credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_json, scope)
+credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_json_dict, scope)
 client = gspread.authorize(credentials)
 
 # Open the Google Sheets document
@@ -130,7 +136,7 @@ sheet.clear()
 
 # Upload new data to Google Sheets
 sheet.insert_rows(elevation_leaderboard_records, 1)
-# If you have multiple sheet
+# If you have multiple sheets, open them by index or title and insert the data similarly
 
 # # -- ------------------------------------------------------------------------------------------------------
 # #Get athlete club
