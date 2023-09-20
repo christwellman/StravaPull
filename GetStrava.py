@@ -112,7 +112,7 @@ except Exception as e:
     exit(1)  # This will exit the script if an error occurs
 
 # Open the Google Sheets document
-spreadsheet_key = os.getenv('GOOGLE_SHEETS_SPREADSHEET_KEY')
+spreadsheet_key = os.environ['GOOGLE_SHEETS_SPREADSHEET_KEY']
 if not spreadsheet_key:
     print("Spreadsheet key not found in environment variables")
     exit(1)
@@ -149,4 +149,4 @@ distance_sheet.clear()
 set_with_dataframe(elevation_sheet, updated_elevation_data, include_index=False, include_column_header=True, resize=True)
 set_with_dataframe(distance_sheet, updated_distance_data, include_index=False, include_column_header=True, resize=True)
 
-logging.info('GetStravaData.py has run')
+logging.info('GetStrava.py has run')
