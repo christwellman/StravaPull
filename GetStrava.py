@@ -152,7 +152,7 @@ except gspread.exceptions.WorksheetNotFound as e:
 existing_elevation_data = pd.DataFrame(elevation_sheet.get_all_records())
 
 # # Create separate dataframes for elevation and distance leaderboard
-elevation_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain','Simple Date','Asterisk','QiC']].sort_values(by='total_elevation_gain',ascending=False)
+elevation_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain','Simple Date','asterisk','QiC']].sort_values(by='total_elevation_gain',ascending=False)
 
 # Concatenate new data to existing data
 updated_elevation_data = pd.concat([existing_elevation_data, elevation_leaderboard_df], ignore_index=True)
