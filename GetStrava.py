@@ -19,9 +19,6 @@ from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 import requests
 
-if not os.path.exists('./data'):
-    os.makedirs('./data')
-
 # Define logfile
 LOG_FILENAME = datetime.now().strftime('./logs/GetStravaData_%a.log')
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
@@ -45,7 +42,6 @@ logging.info(print(response))
 
 #Save response as json in new variable
 new_strava_tokens = response.json()
-
 strava_tokens = new_strava_tokens
 
 #Activity Name 
@@ -109,12 +105,8 @@ logging.info(activities[['name','start_date_local','distance','total_elevation_g
 activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='distance',ascending=False).to_csv('./data/HD_Distance_Leaderboard.csv', header=False)
 # # -- ------------------------------------------------------------------------------------------------------
 # # Load credentials from environment variable (GitHub secret)
-# credentials_json = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
 credentials_json = os.environ['GOOGLE_SHEETS_CREDENTIALS']
 credentials_json = credentials_json.replace('\n', ' ')
-credentials_json = credentials_json.replace('\n', ' ')
-print(credentials_json)
-
 credentials_json_dict = json.loads(credentials_json)
 
 try:
@@ -122,26 +114,49 @@ try:
     credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_json_dict, scope)
     client = gspread.authorize(credentials)
 except json.JSONDecodeError as e:
-    print(f"JSON Decode Error: {e}")
+    logging.error(f"JSON Decode Error: {e}")
     exit(1)  # This will exit the script if an error occurs
 except Exception as e:
-    print(f"An error occurred: {e}")
+    logging.error(f"An error occurred: {e}")
     exit(1)  # This will exit the script if an error occurs
 
 # Open the Google Sheets document
-spreadsheet_key = '1416YvyZiCqt3AF2LaAhguj4jLxnkXQIBdFbHsRcX32Y'  # From the URL of your Google Sheets document
+spreadsheet_key = os.getenv('GOOGLE_SHEETS_SPREADSHEET_KEY')
+if not spreadsheet_key:
+    print("Spreadsheet key not found in environment variables")
+    exit(1)
 
-# Creating a new worksheets
 spreadsheet = client.open_by_key(spreadsheet_key)
-elevation_sheet = spreadsheet.add_worksheet(title="Elevation", rows="100", cols="26")
-distance_sheet = spreadsheet.add_worksheet(title="Distance", rows="100", cols="26")
 
-# Create separate dataframes for elevation and distance leaderboard
+# Get references to the existing sheets by title
+try:
+    elevation_sheet = spreadsheet.worksheet("Elevation")
+    distance_sheet = spreadsheet.worksheet("Distance")
+except gspread.exceptions.WorksheetNotFound as e:
+    print(f"Worksheet not found: {e}")
+    # elevation_sheet = spreadsheet.add_worksheet(title="Elevation", rows="100", cols="6")
+    # distance_sheet = spreadsheet.add_worksheet(title="Distance", rows="100", cols="6")
+    exit(1)
+
+# Read existing data into dataframes
+existing_elevation_data = pd.DataFrame(elevation_sheet.get_all_records())
+existing_distance_data = pd.DataFrame(distance_sheet.get_all_records())
+
+
+# # Create separate dataframes for elevation and distance leaderboard
 elevation_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='total_elevation_gain',ascending=False)
 distance_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='distance',ascending=False)
 
-# Upload new data to Google Sheets (replace `sheet` with the appropriate worksheet object)
-set_with_dataframe(elevation_sheet, elevation_leaderboard_df, row=1, col=1, include_index=False, include_column_header=True, resize=False)
-set_with_dataframe(distance_sheet, distance_leaderboard_df, row=1, col=1, include_index=False, include_column_header=True, resize=False)
+# Concatenate new data to existing data
+updated_elevation_data = pd.concat([existing_elevation_data, elevation_leaderboard_df], ignore_index=True)
+updated_distance_data = pd.concat([existing_distance_data, distance_leaderboard_df], ignore_index=True)
+
+# Clear the sheets before uploading the updated data
+elevation_sheet.clear()
+distance_sheet.clear()
+
+# Upload the updated dataframes back to the sheets
+set_with_dataframe(elevation_sheet, updated_elevation_data, include_index=False, include_column_header=True, resize=True)
+set_with_dataframe(distance_sheet, updated_distance_data, include_index=False, include_column_header=True, resize=True)
 
 logging.info('GetStravaData.py has run')
