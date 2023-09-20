@@ -42,7 +42,7 @@ response = requests.post(
         'refresh_token': refresh_token
     }
 )
-logging.info(response)
+logging.debug(response)
 
 #Save response as json in new variable
 new_strava_tokens = response.json()
@@ -72,7 +72,7 @@ while True:
     # get page of activities from Strava
     r = requests.get(f"{url}?access_token={access_token}&per_page=200&page={page}")
     r = r.json()
-    logging.info(r)
+    logging.debug(r)
     # print(r)
     with open('athlete_activities.json', 'a') as outfile:
         json.dump(r, outfile)
