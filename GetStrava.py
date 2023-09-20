@@ -142,10 +142,11 @@ club_activities = pd.DataFrame(
 
 while page <= 12 :
     # https://www.strava.com/api/v3/clubs/{id}/activities?page=&per_page=" "Authorization: Bearer [[token]]"
-    # logging.info( Clubid + '/activities'  + '&per_page=200' + '&page=' + str(page))
+    logging.info( Clubid + '/activities'  + '&per_page=200' + '&page=' + str(page))
     # r = requests.get(url + '/' + Clubid + '/activities'  + '?access_token=' + access_token + '&per_page=200' + '&page=' + str(page))
     r = requests.get(f"{url}/{Clubid}/activities?access_token={access_token}&per_page=200&page={str(page)}")
-    # r = requests.get(f"{url}?access_token={access_token}&per_page=200&page={page}")
+    if r.status_code == 400:
+        logging.error(r.content)
 
     r = r.json()
     with open('club_activities.json', 'a') as outfile:
