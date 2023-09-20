@@ -109,9 +109,10 @@ activities[['name','start_date_local','distance','total_elevation_gain']].sort_v
 # # Load credentials from environment variable (GitHub secret)
 # credentials_json = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
 credentials_json = os.environ['GOOGLE_SHEETS_CREDENTIALS']
-credentials_json_dict = json.loads(credentials_json)
+credentials_json = credentials_json.replace('\n', '\\n')
+print(credentials_json)
 
-print(credentials_json_dict)
+credentials_json_dict = json.loads(credentials_json)
 
 try:
     scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/drive']
