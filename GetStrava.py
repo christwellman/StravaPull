@@ -109,7 +109,7 @@ activities[['name','start_date_local','distance','total_elevation_gain']].sort_v
 # # Load credentials from environment variable (GitHub secret)
 # credentials_json = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
 credentials_json = os.environ['GOOGLE_SHEETS_CREDENTIALS']
-credentials_json = credentials_json.replace('\n', '\\n')
+credentials_json = credentials_json.replace('\n', ' ')
 print(credentials_json)
 
 credentials_json_dict = json.loads(credentials_json)
@@ -118,11 +118,12 @@ try:
     scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/drive']
     credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_json_dict, scope)
     client = gspread.authorize(credentials)
-
 except json.JSONDecodeError as e:
-        print(f"JSON Decode Error: {e}")
+    print(f"JSON Decode Error: {e}")
+    exit(1)  # This will exit the script if an error occurs
 except Exception as e:
-        print(f"An error occurred: {e}")
+    print(f"An error occurred: {e}")
+    exit(1)  # This will exit the script if an error occurs
 
 # Open the Google Sheets document
 spreadsheet_key = '1416YvyZiCqt3AF2LaAhguj4jLxnkXQIBdFbHsRcX32Y'  # From the URL of your Google Sheets document
