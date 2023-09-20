@@ -111,7 +111,7 @@ activities['Asterisk'] = ((activities['name'].str.contains('EC', case=False)) |
 activities['Asterisk'] = activities['Asterisk'].astype(bool)
 
 # Extract substring between "dome:" and " Q" to create 'QiC' column
-activities['QiC'] = activities['name'].str.extract('dome:(.*?) Q', flags=re.IGNORECASE)
+activities['QiC'] = activities['name'].str.extract(':(.*?) Q', flags=re.IGNORECASE)
 
 # Load credentials from environment variable (GitHub secret)
 credentials_json = os.environ['GOOGLE_SHEETS_CREDENTIALS']
