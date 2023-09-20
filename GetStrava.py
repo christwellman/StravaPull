@@ -114,6 +114,62 @@ activities['asterisk'] = activities['asterisk'].astype(bool)
 activities['QiC'] = activities['name'].str.extract(':(.*?) Q', flags=re.IGNORECASE)
 activities['QiC'] = activities['QiC'].str.strip()
 
+# -- ----------------------------------------------------------------------------------------
+# Get Club Activities
+
+# /clubs/{id}/activities
+#Loop through all activities
+page = 1
+url = "https://www.strava.com/api/v3/clubs"
+
+access_token = strava_tokens['access_token']
+# 'id': 326452, 'resource_state': 2, 'name': 'F3 Carpex' fetched from above "Get Athlete Club"
+Clubid = '326452'
+
+# Create the dataframe ready for the API call to store your activity data
+club_activities = pd.DataFrame(
+    columns = [
+            # "id",
+            "athlete",
+            "name",
+            "distance",
+            "moving_time",
+            "elapsed_time",
+            "total_elevation_gain"
+    ]
+)
+
+
+while page <= 12 :
+    # https://www.strava.com/api/v3/clubs/{id}/activities?page=&per_page=" "Authorization: Bearer [[token]]"
+    # logging.info( Clubid + '/activities'  + '&per_page=200' + '&page=' + str(page))
+    r = requests.get(url + '/' + Clubid + '/activities'  + '?access_token=' + access_token + '&per_page=400' + '&page=' + str(page))
+    # r = requests.get(f"{url}?access_token={access_token}&per_page=200&page={page}")
+
+    r = r.json()
+    with open('club_activities.json', 'a') as outfile:
+        json.dump(r, outfile)
+
+    if (not r):
+        break
+    
+    # otherwise add new data to dataframe
+    # debug('line:',x)
+    for x in range(len(r)):
+        if pattern.search(r[x]['name']):
+            # club_activities.loc[x + (page-1)*200,'id'] = str(page) + str(r[x])
+            club_activities.loc[x + (page-1)*200,'athlete'] = r[x]['athlete']['firstname'] + ' ' + r[x]['athlete']['lastname']
+            club_activities.loc[x + (page-1)*200,'name'] = r[x]['name']
+            club_activities.loc[x + (page-1)*200,'distance'] = r[x]['distance']*0.000621371 # convert Meters to miles
+            club_activities.loc[x + (page-1)*200,'moving_time'] = r[x]['moving_time']
+            club_activities.loc[x + (page-1)*200,'elapsed_time'] = r[x]['elapsed_time']
+            club_activities.loc[x + (page-1)*200,'total_elevation_gain'] = r[x]['total_elevation_gain']*3.28084 # convert Meters to feet
+    page += 1
+logging.info("{substring} Activities")
+
+# club_activities[['athlete','name','distance','moving_time','elapsed_time','total_elevation_gain']].sort_values(by='distance',ascending=False).to_csv('PAX_HD_Excercises.csv', mode='a', header=False)
+
+# -- ----------------------------------------------------------------------------------------
 
 # Load credentials from environment variable (GitHub secret)
 credentials_json = os.environ['GOOGLE_SHEETS_CREDENTIALS']
@@ -142,6 +198,7 @@ spreadsheet = client.open_by_key(spreadsheet_key)
 # Get references to the existing sheets by title
 try:
     elevation_sheet = spreadsheet.worksheet("Elevation")
+    club_sheet = spreadsheet.worksheet("Club Activities")
 except gspread.exceptions.WorksheetNotFound as e:
     print(f"Worksheet not found: {e}")
     # elevation_sheet = spreadsheet.add_worksheet(title="Elevation", rows="100", cols="6")
@@ -150,17 +207,22 @@ except gspread.exceptions.WorksheetNotFound as e:
 
 # Read existing data into dataframes
 existing_elevation_data = pd.DataFrame(elevation_sheet.get_all_records())
+existing_club_data = pd.DataFrame(club_sheet.get_all_records())
 
 # # Create separate dataframes for elevation and distance leaderboard
 elevation_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain','Simple Date','asterisk','QiC']].sort_values(by='total_elevation_gain',ascending=False)
+club_leaderboard_df = club_activities[['athlete','name','distance','moving_time','elapsed_time','total_elevation_gain']].sort_values(by='distance',ascending=False)
 
 # Concatenate new data to existing data
 updated_elevation_data = pd.concat([existing_elevation_data, elevation_leaderboard_df], ignore_index=True)
+updated_club_data = pd.concat([existing_club_data, club_leaderboard_df], ignore_index=True)
 
 # Clear the sheets before uploading the updated data
 elevation_sheet.clear()
+club_sheet.clear()
 
 # Upload the updated dataframes back to the sheets
 set_with_dataframe(elevation_sheet, updated_elevation_data, include_index=False, include_column_header=True, resize=True)
+set_with_dataframe(club_sheet, updated_club_data, include_index=False, include_column_header=True, resize=True)
 
 logging.info('GetStrava.py has run')
