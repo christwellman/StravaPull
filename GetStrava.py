@@ -1,5 +1,5 @@
 # /usr/local/bin/python3.9
-# Pulls MY Strava Data for posts including "Half Dome" and creates a CSV sorted of the most height climed and distance gained
+# Pulls MY Strava Data for posts including "Half Dome" and logs to a google sheeet
 # todo: Pull from everyone in the club
     #  Average club distance for the day 
     #  Exclude anything with "EC"
