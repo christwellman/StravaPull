@@ -7,7 +7,8 @@
 import os
 import json
 import logging
-import time
+# import time
+import re
 from datetime import datetime
 from distutils.log import debug
 
@@ -24,6 +25,12 @@ LOG_FILENAME = datetime.now().strftime('./logs/GetStravaData_%a.log')
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 # logging.basicConfig( level=logging.DEBUG,format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
+
+#Activity Name 
+# substring = 'Half Dome'
+pattern = re.compile(r'half\s*dome', re.IGNORECASE)
+
+
 # Get credentials from environment variables
 client_id = os.environ.get('STRAVA_CLIENT_ID')
 client_secret = os.environ.get('STRAVA_CLIENT_SECRET')
@@ -38,14 +45,11 @@ response = requests.post(
         'refresh_token': refresh_token
     }
 )
-logging.info(print(response))
+logging.info(response)
 
 #Save response as json in new variable
 new_strava_tokens = response.json()
 strava_tokens = new_strava_tokens
-
-#Activity Name 
-substring = 'Half Dome'
 
 #Loop through all activities
 page = 1
@@ -69,7 +73,7 @@ activities = pd.DataFrame(
 while True:
     
     # get page of activities from Strava
-    r = requests.get(url + '?access_token=' + access_token + '&per_page=200' + '&page=' + str(page))
+    r = requests.get(f"{url}?access_token={access_token}&per_page=200&page={page}")
     r = r.json()
     logging.info(r)
     # print(r)
@@ -81,7 +85,7 @@ while True:
     
     # otherwise add new data to dataframe
     for x in range(len(r)):
-        if r[x]['name'].find(substring) != -1:
+        if pattern.search(r[x]['name']):
             activities.loc[x + (page-1)*200,'id'] = r[x]['id']
             activities.loc[x + (page-1)*200,'name'] = r[x]['name']
             activities.loc[x + (page-1)*200,'start_date_local'] = r[x]['start_date_local']
