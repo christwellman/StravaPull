@@ -94,17 +94,8 @@ while True:
             activities.loc[x + (page-1)*200,'external_id'] = r[x]['external_id']
 # increment page
     page += 1
-logging.info('Elevation Leaderboard')
-logging.info(activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='total_elevation_gain',ascending=False))
-# print("Creating HD_Elevation_Leaderboard.csv...")
-activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='total_elevation_gain',ascending=False).to_csv('./data/HD_Elevation_Leaderboard.csv', header=False)
 
-logging.info('Distance Leaderboard')
-logging.info(activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='distance',ascending=False))
-# print("Creating HD_Distance_Leaderboard.csv...")
-activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='distance',ascending=False).to_csv('./data/HD_Distance_Leaderboard.csv', header=False)
-# # -- ------------------------------------------------------------------------------------------------------
-# # Load credentials from environment variable (GitHub secret)
+# Load credentials from environment variable (GitHub secret)
 credentials_json = os.environ['GOOGLE_SHEETS_CREDENTIALS']
 credentials_json = credentials_json.replace('\n', ' ')
 credentials_json_dict = json.loads(credentials_json)
@@ -141,7 +132,6 @@ except gspread.exceptions.WorksheetNotFound as e:
 # Read existing data into dataframes
 existing_elevation_data = pd.DataFrame(elevation_sheet.get_all_records())
 existing_distance_data = pd.DataFrame(distance_sheet.get_all_records())
-
 
 # # Create separate dataframes for elevation and distance leaderboard
 elevation_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='total_elevation_gain',ascending=False)
