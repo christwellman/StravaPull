@@ -1,6 +1,9 @@
 name: Refresh Strava Data Action
 
 on:
+  push:
+    branches:
+      - main  # or your default branch
   schedule:
     - cron: '0 */4 * * *' # This schedules the job to run every 4 hours. Adjust the cron expression as per your needs.
   # push:

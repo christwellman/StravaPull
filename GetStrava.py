@@ -43,10 +43,7 @@ logging.info(print(response))
 
 #Save response as json in new variable
 new_strava_tokens = response.json()
-# Save new tokens to file
-    # with open('strava_tokens.json', 'w') as outfile:
-    #     json.dump(new_strava_tokens, outfile)
-#Use new Strava tokens from now
+
 strava_tokens = new_strava_tokens
 
 #Activity Name 
@@ -109,34 +106,22 @@ logging.info(activities[['name','start_date_local','distance','total_elevation_g
 # print("Creating HD_Distance_Leaderboard.csv...")
 activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='distance',ascending=False).to_csv('./data/HD_Distance_Leaderboard.csv', header=False)
 # # -- ------------------------------------------------------------------------------------------------------
-# Load credentials from environment variable (GitHub secret)
-import json
+# # Load credentials from environment variable (GitHub secret)
+# credentials_json = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
+credentials_json = os.environ['GOOGLE_SHEETS_CREDENTIALS']
+credentials_json_dict = json.loads(credentials_json)
 
-# ... other parts of your script
+print(credentials_json_dict)
 
-# Load credentials from environment variable (GitHub secret)
-credentials_json = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
-print(credentials_json)
+try:
+    scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/drive']
+    credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_json_dict, scope)
+    client = gspread.authorize(credentials)
 
-if credentials_json:
-    credentials_json = credentials_json.replace('\n', '\\n')
-    credentials_json = credentials_json.replace("'", '"')
-    try:
-        # Now try to convert the modified string to a dictionary
-        credentials_json_dict = json.loads(credentials_json)
-        # credentials_json_dict = credentials_json
-        # Use credentials to authenticate with the Google Sheets API
-        scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/drive']
-        credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_json_dict, scope)
-        client = gspread.authorize(credentials)
-
-    except json.JSONDecodeError as e:
+except json.JSONDecodeError as e:
         print(f"JSON Decode Error: {e}")
-    except Exception as e:
+except Exception as e:
         print(f"An error occurred: {e}")
-else:
-    print("credentials_json is None")
-
 
 # Open the Google Sheets document
 spreadsheet_key = '1416YvyZiCqt3AF2LaAhguj4jLxnkXQIBdFbHsRcX32Y'  # From the URL of your Google Sheets document
