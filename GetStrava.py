@@ -143,7 +143,8 @@ club_activities = pd.DataFrame(
 while page <= 12 :
     # https://www.strava.com/api/v3/clubs/{id}/activities?page=&per_page=" "Authorization: Bearer [[token]]"
     # logging.info( Clubid + '/activities'  + '&per_page=200' + '&page=' + str(page))
-    r = requests.get(url + '/' + Clubid + '/activities'  + '?access_token=' + access_token + '&per_page=400' + '&page=' + str(page))
+    # r = requests.get(url + '/' + Clubid + '/activities'  + '?access_token=' + access_token + '&per_page=200' + '&page=' + str(page))
+    r = requests.get(f"{url}/{Clubid}/activities?access_token={access_token}&per_page=200&page={str(page)}")
     # r = requests.get(f"{url}?access_token={access_token}&per_page=200&page={page}")
 
     r = r.json()
@@ -156,14 +157,20 @@ while page <= 12 :
     # otherwise add new data to dataframe
     # debug('line:',x)
     for x in range(len(r)):
-        if pattern.search(r[x]['name']):
-            # club_activities.loc[x + (page-1)*200,'id'] = str(page) + str(r[x])
-            club_activities.loc[x + (page-1)*200,'athlete'] = r[x]['athlete']['firstname'] + ' ' + r[x]['athlete']['lastname']
-            club_activities.loc[x + (page-1)*200,'name'] = r[x]['name']
-            club_activities.loc[x + (page-1)*200,'distance'] = r[x]['distance']*0.000621371 # convert Meters to miles
-            club_activities.loc[x + (page-1)*200,'moving_time'] = r[x]['moving_time']
-            club_activities.loc[x + (page-1)*200,'elapsed_time'] = r[x]['elapsed_time']
-            club_activities.loc[x + (page-1)*200,'total_elevation_gain'] = r[x]['total_elevation_gain']*3.28084 # convert Meters to feet
+        try:
+            if pattern.search(r[x]['name']):
+                # club_activities.loc[x + (page-1)*200,'id'] = str(page) + str(r[x])
+                club_activities.loc[x + (page-1)*200,'athlete'] = r[x]['athlete']['firstname'] + ' ' + r[x]['athlete']['lastname']
+                club_activities.loc[x + (page-1)*200,'name'] = r[x]['name']
+                club_activities.loc[x + (page-1)*200,'distance'] = r[x]['distance']*0.000621371 # convert Meters to miles
+                club_activities.loc[x + (page-1)*200,'moving_time'] = r[x]['moving_time']
+                club_activities.loc[x + (page-1)*200,'elapsed_time'] = r[x]['elapsed_time']
+                club_activities.loc[x + (page-1)*200,'total_elevation_gain'] = r[x]['total_elevation_gain']*3.28084 # convert Meters to feet
+        except KeyError as e:
+            logging.error(f"KeyError: {e}")
+        except Exception as e:
+            logging.error(f"An unexpected error occurred: {e}")
+
     page += 1
 logging.info("{substring} Activities")
 
