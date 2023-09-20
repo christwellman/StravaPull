@@ -104,14 +104,16 @@ activities['start_date_local'] = pd.to_datetime(activities['start_date_local'])
 activities['Simple Date'] = activities['start_date_local'].dt.strftime('%m/%d/%Y')
 
 # Create 'Asterisk' column with binary values based on the specified conditions
-activities['Asterisk'] = ((activities['name'].str.contains('EC', case=False)) | 
+activities['asterisk'] = ((activities['name'].str.contains('EC', case=False)) | 
                           (activities['start_date_local'].dt.time < pd.to_datetime('05:20:00').time()))
 
-# Convert 'Asterisk' column to boolean type
-activities['Asterisk'] = activities['Asterisk'].astype(bool)
+# Convert 'asterisk' column to boolean type
+activities['asterisk'] = activities['asterisk'].astype(bool)
 
 # Extract substring between "dome:" and " Q" to create 'QiC' column
-activities['QiC'] = activities['name'].str.extract('dome:(.*?) Q', flags=re.IGNORECASE).str.strip()
+activities['QiC'] = activities['name'].str.extract(':(.*?) Q', flags=re.IGNORECASE)
+activities['QiC'] = activities['QiC'].str.strip()
+
 
 # Load credentials from environment variable (GitHub secret)
 credentials_json = os.environ['GOOGLE_SHEETS_CREDENTIALS']
