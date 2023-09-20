@@ -23,11 +23,8 @@ import requests
 # Define logfile
 LOG_FILENAME = datetime.now().strftime('./logs/GetStravaData_%a.log')
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
-# logging.basicConfig( level=logging.DEBUG,format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
-
 
 #Activity Name 
-# substring = 'Half Dome'
 pattern = re.compile(r'half\s*dome', re.IGNORECASE)
 
 
@@ -99,6 +96,23 @@ while True:
 # increment page
     page += 1
 
+# Data Cleanup Manuplation
+# Convert 'start_date_local' to datetime format
+activities['start_date_local'] = pd.to_datetime(activities['start_date_local'])
+
+# Create 'Simple Date' column with date in MM/DD/YYYY format
+activities['Simple Date'] = activities['start_date_local'].dt.strftime('%m/%d/%Y')
+
+# Create 'Asterisk' column with binary values based on the specified conditions
+activities['Asterisk'] = ((activities['name'].str.contains('EC', case=False)) | 
+                          (activities['start_date_local'].dt.time < pd.to_datetime('05:20:00').time()))
+
+# Convert 'Asterisk' column to boolean type
+activities['Asterisk'] = activities['Asterisk'].astype(bool)
+
+# Extract substring between "dome:" and " Q" to create 'QiC' column
+activities['QiC'] = activities['name'].str.extract('dome:(.*?) Q', flags=re.IGNORECASE)
+
 # Load credentials from environment variable (GitHub secret)
 credentials_json = os.environ['GOOGLE_SHEETS_CREDENTIALS']
 credentials_json = credentials_json.replace('\n', ' ')
@@ -138,8 +152,8 @@ existing_elevation_data = pd.DataFrame(elevation_sheet.get_all_records())
 existing_distance_data = pd.DataFrame(distance_sheet.get_all_records())
 
 # # Create separate dataframes for elevation and distance leaderboard
-elevation_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='total_elevation_gain',ascending=False)
-distance_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='distance',ascending=False)
+elevation_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain','Simple Date','Asterisk','QiC']].sort_values(by='total_elevation_gain',ascending=False)
+distance_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain','Simple Date','Asterisk','QiC']].sort_values(by='distance',ascending=False)
 
 # Concatenate new data to existing data
 updated_elevation_data = pd.concat([existing_elevation_data, elevation_leaderboard_df], ignore_index=True)
