@@ -12,6 +12,8 @@ from datetime import datetime
 from distutils.log import debug
 
 import gspread
+
+from gspread_dataframe import set_with_dataframe
 from oauth2client.service_account import ServiceAccountCredentials
 
 import pandas as pd
@@ -101,7 +103,7 @@ logging.info(activities[['name','start_date_local','distance','total_elevation_g
 # print("Creating HD_Elevation_Leaderboard.csv...")
 activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='total_elevation_gain',ascending=False).to_csv('./data/HD_Elevation_Leaderboard.csv', header=False)
 
-logging.info('Distnace Leaderboard')
+logging.info('Distance Leaderboard')
 logging.info(activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='distance',ascending=False))
 # print("Creating HD_Distance_Leaderboard.csv...")
 activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='distance',ascending=False).to_csv('./data/HD_Distance_Leaderboard.csv', header=False)
@@ -109,6 +111,7 @@ activities[['name','start_date_local','distance','total_elevation_gain']].sort_v
 # # Load credentials from environment variable (GitHub secret)
 # credentials_json = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
 credentials_json = os.environ['GOOGLE_SHEETS_CREDENTIALS']
+credentials_json = credentials_json.replace('\n', ' ')
 credentials_json = credentials_json.replace('\n', ' ')
 print(credentials_json)
 
@@ -127,95 +130,15 @@ except Exception as e:
 
 # Open the Google Sheets document
 spreadsheet_key = '1416YvyZiCqt3AF2LaAhguj4jLxnkXQIBdFbHsRcX32Y'  # From the URL of your Google Sheets document
-sheet = client.open_by_key(spreadsheet_key).sheet1
 
-# Convert your data frames to records (list of dictionaries) for easy uploading
-elevation_leaderboard_records = activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='total_elevation_gain',ascending=False).to_dict('records')
-distance_leaderboard_records = activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='distance',ascending=False).to_dict('records')
+elevation_sheet = client.open_by_key(spreadsheet_key).sheet1
+distance_sheet = client.open_by_key(spreadsheet_key).sheet2
 
-# Clear existing data in the sheets ?
-# sheet.clear()
+# Create separate dataframes for elevation and distance leaderboard
+elevation_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='total_elevation_gain',ascending=False)
+distance_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='distance',ascending=False)
 
-# Upload new data to Google Sheets
-sheet.insert_rows(elevation_leaderboard_records, 1)
-# If you have multiple sheets, open them by index or title and insert the data similarly
-
-# # -- ------------------------------------------------------------------------------------------------------
-# #Get athlete club
-# page = 1
-# url = "https://www.strava.com/api/v3/athlete/clubs"history
-#             "member_count",
-#             "dimensions"
-#     ]
-# )
-
-
-# r = requests.get(url + '?access_token=' + access_token + '&per_page=200' + '&page=' + str(page))
-# r = r.json()
-
-# for x in range(len(r)):
-#     clubs.loc[x + (page-1)*200,'id'] = r[x]['id']
-#     clubs.loc[x + (page-1)*200,'resource_state'] = r[x]['resource_state']
-#     clubs.loc[x + (page-1)*200,'name'] = r[x]['name']
-#     clubs.loc[x + (page-1)*200,'member_count'] = r[x]['member_count']
-#     clubs.loc[x + (page-1)*200,'dimensions'] = r[x]['dimensions']
-
-# print(clubs)
-# # -- ------------------------------------------------------------------------------------------------------
-# Get Club Activities
-
-# /clubs/{id}/activities
-#Loop through all activities
-page = 1
-url = "https://www.strava.com/api/v3/clubs"
-
-access_token = strava_tokens['access_token']
-# 'id': 326452, 'resource_state': 2, 'name': 'F3 Carpex' fetched from above "Get Athlete Club"
-Clubid = '326452'
-substring = 'Half Dome'
-
-# Create the dataframe ready for the API call to store your activity data
-club_activities = pd.DataFrame(
-    columns = [
-            # "id",
-            "athlete",
-            "name",
-            "distance",
-            "moving_time",
-            "elapsed_time",
-            "total_elevation_gain"
-    ]
-)
-
-
-while page <= 12 :
-    # https://www.strava.com/api/v3/clubs/{id}/activities?page=&per_page=" "Authorization: Bearer [[token]]"
-    # logging.info( Clubid + '/activities'  + '&per_page=200' + '&page=' + str(page))
-    r = requests.get(url + '/' + Clubid + '/activities'  + '?access_token=' + access_token + '&per_page=200' + '&page=' + str(page))
-
-    r = r.json()
-    with open('club_activities.json', 'a') as outfile:
-        json.dump(r, outfile)
-
-    if (not r):
-        break
-    
-    # otherwise add new data to dataframe
-    # debug('line:',x)
-    for x in range(len(r)):
-        if r[x]['name'].find(substring) != -1:
-            # club_activities.loc[x + (page-1)*200,'id'] = str(page) + str(r[x])
-            club_activities.loc[x + (page-1)*200,'athlete'] = r[x]['athlete']['firstname'] + ' ' + r[x]['athlete']['lastname']
-            club_activities.loc[x + (page-1)*200,'name'] = r[x]['name']
-            club_activities.loc[x + (page-1)*200,'distance'] = r[x]['distance']*0.000621371 # convert Meters to miles
-            club_activities.loc[x + (page-1)*200,'moving_time'] = r[x]['moving_time']
-            club_activities.loc[x + (page-1)*200,'elapsed_time'] = r[x]['elapsed_time']
-            club_activities.loc[x + (page-1)*200,'total_elevation_gain'] = r[x]['total_elevation_gain']*3.28084 # convert Meters to feet
-    page += 1
-logging.info('-- ------------------------------------------  --------------------------------------------')
-logging.info("{substring} Activities")
-logging.info(club_activities)
-logging.info('-- ------------------------------------------  --------------------------------------------')
-club_activities[['athlete','name','distance','moving_time','elapsed_time','total_elevation_gain']].sort_values(by='distance',ascending=False).to_csv('./data/PAX_HD_Excercises.csv', mode='a', header=False)
+# Upload new data to Google Sheets (replace `sheet` with the appropriate worksheet object)
+set_with_dataframe(elevation_sheet, elevation_leaderboard_df, row=1, col=1, include_index=False, include_column_header=True, resize=False)
 
 logging.info('GetStravaData.py has run')
