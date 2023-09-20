@@ -111,7 +111,7 @@ activities['Asterisk'] = ((activities['name'].str.contains('EC', case=False)) |
 activities['Asterisk'] = activities['Asterisk'].astype(bool)
 
 # Extract substring between "dome:" and " Q" to create 'QiC' column
-activities['QiC'] = activities['name'].str.extract(':(.*?) Q', flags=re.IGNORECASE)
+activities['QiC'] = activities['name'].str.extract('dome:(.*?) Q', flags=re.IGNORECASE).str.strip()
 
 # Load credentials from environment variable (GitHub secret)
 credentials_json = os.environ['GOOGLE_SHEETS_CREDENTIALS']
@@ -140,7 +140,6 @@ spreadsheet = client.open_by_key(spreadsheet_key)
 # Get references to the existing sheets by title
 try:
     elevation_sheet = spreadsheet.worksheet("Elevation")
-    distance_sheet = spreadsheet.worksheet("Distance")
 except gspread.exceptions.WorksheetNotFound as e:
     print(f"Worksheet not found: {e}")
     # elevation_sheet = spreadsheet.add_worksheet(title="Elevation", rows="100", cols="6")
@@ -149,22 +148,17 @@ except gspread.exceptions.WorksheetNotFound as e:
 
 # Read existing data into dataframes
 existing_elevation_data = pd.DataFrame(elevation_sheet.get_all_records())
-existing_distance_data = pd.DataFrame(distance_sheet.get_all_records())
 
 # # Create separate dataframes for elevation and distance leaderboard
 elevation_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain','Simple Date','Asterisk','QiC']].sort_values(by='total_elevation_gain',ascending=False)
-distance_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain','Simple Date','Asterisk','QiC']].sort_values(by='distance',ascending=False)
 
 # Concatenate new data to existing data
 updated_elevation_data = pd.concat([existing_elevation_data, elevation_leaderboard_df], ignore_index=True)
-updated_distance_data = pd.concat([existing_distance_data, distance_leaderboard_df], ignore_index=True)
 
 # Clear the sheets before uploading the updated data
 elevation_sheet.clear()
-distance_sheet.clear()
 
 # Upload the updated dataframes back to the sheets
 set_with_dataframe(elevation_sheet, updated_elevation_data, include_index=False, include_column_header=True, resize=True)
-set_with_dataframe(distance_sheet, updated_distance_data, include_index=False, include_column_header=True, resize=True)
 
 logging.info('GetStrava.py has run')
