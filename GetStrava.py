@@ -131,8 +131,10 @@ except Exception as e:
 # Open the Google Sheets document
 spreadsheet_key = '1416YvyZiCqt3AF2LaAhguj4jLxnkXQIBdFbHsRcX32Y'  # From the URL of your Google Sheets document
 
-elevation_sheet = client.open_by_key(spreadsheet_key).sheet1
-distance_sheet = client.open_by_key(spreadsheet_key).sheet2
+# Creating a new worksheets
+spreadsheet = client.open_by_key(spreadsheet_key)
+elevation_sheet = spreadsheet.add_worksheet(title="Elevation", rows="100", cols="26")
+distance_sheet = spreadsheet.add_worksheet(title="Distance", rows="100", cols="26")
 
 # Create separate dataframes for elevation and distance leaderboard
 elevation_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain']].sort_values(by='total_elevation_gain',ascending=False)
@@ -140,5 +142,6 @@ distance_leaderboard_df = activities[['name','start_date_local','distance','tota
 
 # Upload new data to Google Sheets (replace `sheet` with the appropriate worksheet object)
 set_with_dataframe(elevation_sheet, elevation_leaderboard_df, row=1, col=1, include_index=False, include_column_header=True, resize=False)
+set_with_dataframe(distance_sheet, distance_leaderboard_df, row=1, col=1, include_index=False, include_column_header=True, resize=False)
 
 logging.info('GetStravaData.py has run')
