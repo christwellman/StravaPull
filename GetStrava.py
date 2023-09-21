@@ -229,6 +229,10 @@ updated_club_data = pd.concat([existing_club_data, club_leaderboard_df], ignore_
 elevation_sheet.clear()
 club_sheet.clear()
 
+# De-duplicate keeping latest
+updated_elevation_data = updated_elevation_data.drop_duplicates(keep='last')
+updated_club_data = updated_club_data.drop_duplicates(keep='last')
+
 # Upload the updated dataframes back to the sheets
 set_with_dataframe(elevation_sheet, updated_elevation_data, include_index=False, include_column_header=True, resize=True)
 set_with_dataframe(club_sheet, updated_club_data, include_index=False, include_column_header=True, resize=True)
