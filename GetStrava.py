@@ -22,7 +22,7 @@ import requests
 
 # Define logfile
 LOG_FILENAME = datetime.now().strftime('./logs/GetStravaData_%a.log')
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s: %(level)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s: %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 #Activity Name 
 pattern = re.compile(r'half\s*dome', re.IGNORECASE)
