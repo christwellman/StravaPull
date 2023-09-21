@@ -113,8 +113,7 @@ activities['asterisk'] = activities['asterisk'].astype(bool)
 # Extract substring between "dome:" and " Q" to create 'QiC' column
 activities['QiC'] = activities['name'].str.extract(':(.*?) Q', flags=re.IGNORECASE)
 activities['QiC'] = activities['QiC'].str.strip()
-if activities['QiC'] == 'YHC':
-    activities['QiC'] = 'Ramsay'
+activities.loc[activities['QiC'] == 'YHC', 'QiC'] = 'Ramsay'
 
 # -- ----------------------------------------------------------------------------------------
 # Get Club Activities
@@ -230,6 +229,8 @@ updated_club_data = pd.concat([existing_club_data, club_leaderboard_df], ignore_
 # De-duplicate keeping latest
 updated_elevation_data = updated_elevation_data.drop_duplicates(subset=['name','start_date_local','distance','total_elevation_gain'],keep='last')
 updated_club_data = updated_club_data.drop_duplicates(subset=['athlete','name','distance','moving_time','elapsed_time','total_elevation_gain'],keep='last')
+
+print(updated_elevation_data[updated_elevation_data.duplicated(subset=['name', 'start_date_local'], keep=False)])
 
 # Clear the sheets before uploading the updated data
 elevation_sheet.clear()
