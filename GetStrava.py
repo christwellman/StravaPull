@@ -96,7 +96,7 @@ while True:
 # increment page
     page += 1
 
-# Data Cleanup Manuplation
+# Data Cleanup/Manuplation
 # Convert 'start_date_local' to datetime format
 activities['start_date_local'] = pd.to_datetime(activities['start_date_local'])
 
@@ -205,7 +205,7 @@ spreadsheet = client.open_by_key(spreadsheet_key)
 
 # Get references to the existing sheets by title
 try:
-    elevation_sheet = spreadsheet.worksheet("Elevation")
+    elevation_sheet = spreadsheet.worksheet("Ramsays Records")
     club_sheet = spreadsheet.worksheet("Club Activities")
 except gspread.exceptions.WorksheetNotFound as e:
     print(f"Worksheet not found: {e}")
@@ -225,13 +225,13 @@ club_leaderboard_df = club_activities[['athlete','name','distance','moving_time'
 updated_elevation_data = pd.concat([existing_elevation_data, elevation_leaderboard_df], ignore_index=True)
 updated_club_data = pd.concat([existing_club_data, club_leaderboard_df], ignore_index=True)
 
-# Clear the sheets before uploading the updated data
-elevation_sheet.clear()
-club_sheet.clear()
-
 # De-duplicate keeping latest
 updated_elevation_data = updated_elevation_data.drop_duplicates(keep='last')
 updated_club_data = updated_club_data.drop_duplicates(keep='last')
+
+# Clear the sheets before uploading the updated data
+elevation_sheet.clear()
+club_sheet.clear()
 
 # Upload the updated dataframes back to the sheets
 set_with_dataframe(elevation_sheet, updated_elevation_data, include_index=False, include_column_header=True, resize=True)
