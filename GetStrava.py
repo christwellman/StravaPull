@@ -20,17 +20,13 @@ from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 import requests
 
-# log_dir = "./logs/"
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s [%(pathname)s:%(lineno)d in function %(funcName)s] %(message)s',
+    datefmt='%Y-%m-%d:%H:%M:%S',
+    level=logging.DEBUG
+)
 
-# # Check if directory exists
-# if not os.path.exists(log_dir):
-#     os.makedirs(log_dir)
-
-# # logging setup
-# script_name, script_extension = os.path.splitext(os.path.basename(os.path.abspath(__file__)))
-# LOG_FILENAME = datetime.now().strftime(f'{log_dir}{script_name}_%a.log')
-# logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO, format='%(asctime)s: %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
-logging.basicConfig(level=logging.INFO, format='%(asctime)s: %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+logger = logging.getLogger(__name__)
 
 #Activity Name 
 pattern = re.compile(r'half\s*dome', re.IGNORECASE)
@@ -50,7 +46,7 @@ response = requests.post(
         'refresh_token': refresh_token
     }
 )
-logging.debug(response)
+logger.debug(response)
 
 #Save response as json in new variable
 new_strava_tokens = response.json()
@@ -80,10 +76,10 @@ while True:
     # get page of activities from Strava
     r = requests.get(f"{url}?access_token={access_token}&per_page=200&page={page}")
     r = r.json()
-    logging.debug(r)
+    logger.debug(r)
     # print(r)
     with open('athlete_activities.json', 'a') as outfile:
-        logging.debug(json.dump(r, outfile))
+        logger.debug(json.dump(r, outfile))
 # if no results then exit loop
     if (not r):
         break
@@ -151,23 +147,23 @@ club_activities = pd.DataFrame(
 
 while page <= 12 :
     # https://www.strava.com/api/v3/clubs/{id}/activities?page=&per_page=" "Authorization: Bearer [[token]]"
-    logging.debug(f"{Clubid} + '/activities'  + '&per_page=200' + '&{page}=' + str({page})")
+    logger.debug(f"{Clubid} + '/activities'  + '&per_page=200' + '&{page}=' + str({page})")
     # r = requests.get(url + '/' + Clubid + '/activities'  + '?access_token=' + access_token + '&per_page=200' + '&page=' + str(page))
     r = requests.get(f"{url}/{Clubid}/activities?access_token={access_token}&per_page=200&page={str(page)}")
     if r.status_code == 400:
-        logging.error(r.content)
+        logger.error(r.content)
 
     r = r.json()
     with open('club_activities.json', 'a') as outfile:
-        logging.debug(json.dump(r, outfile))
+        logger.debug(json.dump(r, outfile))
 
     if (not r):
         break
     
     # otherwise add new data to dataframe
-    logging.debug('line:',x)
+    logger.debug('line:',x)
     for x in range(len(r)):
-        logging.debug(f"Debugging Club activities: {r[x]['athlete']['firstname']} {r[x]['athlete']['lastname']} activity: {r[x]['name']}")
+        logger.debug(f"Debugging Club activities: {r[x]['athlete']['firstname']} {r[x]['athlete']['lastname']} activity: {r[x]['name']}")
         try:
             if pattern.search(r[x]['name']):
                 # club_activities.loc[x + (page-1)*200,'id'] = str(page) + str(r[x])
@@ -178,12 +174,12 @@ while page <= 12 :
                 club_activities.loc[x + (page-1)*200,'elapsed_time'] = r[x]['elapsed_time']
                 club_activities.loc[x + (page-1)*200,'total_elevation_gain'] = r[x]['total_elevation_gain']*3.28084 # convert Meters to feet
         except KeyError as e:
-            logging.error(f"KeyError: {e}")
+            logger.error(f"KeyError: {e}")
         except Exception as e:
-            logging.error(f"An unexpected error occurred: {e}")
+            logger.error(f"An unexpected error occurred: {e}")
 
     page += 1
-logging.info("{substring} Activities")
+logger.info("{substring} Activities")
 
 # club_activities[['athlete','name','distance','moving_time','elapsed_time','total_elevation_gain']].sort_values(by='distance',ascending=False).to_csv('PAX_HD_Excercises.csv', mode='a', header=False)
 
@@ -199,16 +195,16 @@ try:
     credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_json_dict, scope)
     client = gspread.authorize(credentials)
 except json.JSONDecodeError as e:
-    logging.error(f"JSON Decode Error: {e}")
+    logger.error(f"JSON Decode Error: {e}")
     exit(1)  # This will exit the script if an error occurs
 except Exception as e:
-    logging.error(f"An error occurred: {e}")
+    logger.error(f"An error occurred: {e}")
     exit(1)  # This will exit the script if an error occurs
 
 # Open the Google Sheets document
 spreadsheet_key = os.environ['GOOGLE_SHEETS_SPREADSHEET_KEY']
 if not spreadsheet_key:
-    logging.error("Spreadsheet key not found in environment variables")
+    logger.error("Spreadsheet key not found in environment variables")
     exit(1)
 
 spreadsheet = client.open_by_key(spreadsheet_key)
@@ -218,7 +214,7 @@ try:
     elevation_sheet = spreadsheet.worksheet("Ramsays Records")
     club_sheet = spreadsheet.worksheet("Club Activities")
 except gspread.exceptions.WorksheetNotFound as e:
-    logging.error(f"Worksheet not found: {e}")
+    logger.error(f"Worksheet not found: {e}")
     # elevation_sheet = spreadsheet.add_worksheet(title="Elevation", rows="100", cols="6")
     # distance_sheet = spreadsheet.add_worksheet(title="Distance", rows="100", cols="6")
     exit(1)
@@ -239,8 +235,8 @@ updated_club_data = pd.concat([existing_club_data, club_leaderboard_df], ignore_
 updated_elevation_data = updated_elevation_data.drop_duplicates(subset=['name','start_date_local'],keep='last')
 updated_club_data = updated_club_data.drop_duplicates(subset=['athlete','name','distance','moving_time','elapsed_time','total_elevation_gain'],keep='last')
 
-logging.info(updated_elevation_data[updated_elevation_data.duplicated(subset=['name', 'start_date_local'], keep=False)])
-logging.info(updated_club_data[updated_club_data.duplicated(subset=['athlete', 'name'], keep=False)])
+logger.info(updated_elevation_data[updated_elevation_data.duplicated(subset=['name', 'start_date_local'], keep=False)])
+logger.info(updated_club_data[updated_club_data.duplicated(subset=['athlete', 'name'], keep=False)])
 
 # Clear the sheets before uploading the updated data
 elevation_sheet.clear()
@@ -250,4 +246,4 @@ club_sheet.clear()
 set_with_dataframe(elevation_sheet, updated_elevation_data, include_index=False, include_column_header=True, resize=True)
 set_with_dataframe(club_sheet, updated_club_data, include_index=False, include_column_header=True, resize=True)
 
-logging.info('GetStrava.py has run')
+logger.info('GetStrava.py has run')
