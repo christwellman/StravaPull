@@ -110,8 +110,8 @@ activities['start_date_local'] = pd.to_datetime(activities['start_date_local'])
 # Create 'Simple Date' column with date in MM/DD/YYYY format
 activities['Simple Date'] = activities['start_date_local'].dt.strftime('%m/%d/%Y')
 
-# Create 'Asterisk' column with binary values based on the specified conditions
-activities['asterisk'] = ((activities['name'].str.contains('EC', case=False)) | 
+# Create 'Asterisk' column based on me flagging a run as having an "EC" or Starting before Start time
+activities['asterisk'] = ((activities['name'].str.contains(r'\sEC$', regex=True, case=False)) | 
                           (activities['start_date_local'].dt.time < pd.to_datetime('05:20:00').time()))
 
 # Convert 'asterisk' column to boolean type
