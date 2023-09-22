@@ -20,9 +20,16 @@ from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 import requests
 
-# Define logfile
-LOG_FILENAME = datetime.now().strftime('./logs/GetStravaData_%a.log')
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s: %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+log_dir = "/Users/logs/"
+
+# Check if directory exists
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+# logging setup
+script_name, script_extension = os.path.splitext(os.path.basename(os.path.abspath(__file__)))
+LOG_FILENAME = datetime.now().strftime(f'{log_dir}{script_name}_%a.log')
+logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO, format='%(asctime)s: %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 #Activity Name 
 pattern = re.compile(r'half\s*dome', re.IGNORECASE)
@@ -227,10 +234,11 @@ updated_elevation_data = pd.concat([existing_elevation_data, elevation_leaderboa
 updated_club_data = pd.concat([existing_club_data, club_leaderboard_df], ignore_index=True)
 
 # De-duplicate keeping latest
-updated_elevation_data = updated_elevation_data.drop_duplicates(subset=['name','start_date_local','distance','total_elevation_gain'],keep='last')
+updated_elevation_data = updated_elevation_data.drop_duplicates(subset=['name','start_date_local'],keep='last')
 updated_club_data = updated_club_data.drop_duplicates(subset=['athlete','name','distance','moving_time','elapsed_time','total_elevation_gain'],keep='last')
 
-print(updated_elevation_data[updated_elevation_data.duplicated(subset=['name', 'start_date_local'], keep=False)])
+logging.info(updated_elevation_data[updated_elevation_data.duplicated(subset=['name', 'start_date_local'], keep=False)])
+logging.info(updated_club_data[updated_club_data.duplicated(subset=['athlete', 'name'], keep=False)])
 
 # Clear the sheets before uploading the updated data
 elevation_sheet.clear()
