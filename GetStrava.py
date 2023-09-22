@@ -20,7 +20,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 import requests
 
-log_dir = "/Users/logs/"
+log_dir = "./logs/"
 
 # Check if directory exists
 if not os.path.exists(log_dir):
