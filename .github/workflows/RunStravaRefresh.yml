@@ -30,7 +30,7 @@ jobs:
           pip install requests pandas gspread gspread-dataframe oauth2client
 
       - name: Run Script
-        run: python GetStrava.py
+        run: python -u GetStrava.py  #man python: -u Force stdin, stdout and stderr to  be  totally  unbuffered.   On systems  where  it matters, also put stdin, stdout and stderr in binary mode.  
         env:
           STRAVA_CLIENT_ID: ${{ secrets.CLIENT_ID }}
           STRAVA_CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}

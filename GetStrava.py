@@ -20,16 +20,17 @@ from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 import requests
 
-log_dir = "./logs/"
+# log_dir = "./logs/"
 
-# Check if directory exists
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
+# # Check if directory exists
+# if not os.path.exists(log_dir):
+#     os.makedirs(log_dir)
 
-# logging setup
-script_name, script_extension = os.path.splitext(os.path.basename(os.path.abspath(__file__)))
-LOG_FILENAME = datetime.now().strftime(f'{log_dir}{script_name}_%a.log')
-logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO, format='%(asctime)s: %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+# # logging setup
+# script_name, script_extension = os.path.splitext(os.path.basename(os.path.abspath(__file__)))
+# LOG_FILENAME = datetime.now().strftime(f'{log_dir}{script_name}_%a.log')
+# logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO, format='%(asctime)s: %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s: %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
 #Activity Name 
 pattern = re.compile(r'half\s*dome', re.IGNORECASE)
@@ -82,7 +83,7 @@ while True:
     logging.debug(r)
     # print(r)
     with open('athlete_activities.json', 'a') as outfile:
-        json.dump(r, outfile)
+        logging.debug(json.dump(r, outfile))
 # if no results then exit loop
     if (not r):
         break
@@ -150,7 +151,7 @@ club_activities = pd.DataFrame(
 
 while page <= 12 :
     # https://www.strava.com/api/v3/clubs/{id}/activities?page=&per_page=" "Authorization: Bearer [[token]]"
-    logging.info( Clubid + '/activities'  + '&per_page=200' + '&page=' + str(page))
+    logging.debug(f"{Clubid} + '/activities'  + '&per_page=200' + '&{page}=' + str({page})")
     # r = requests.get(url + '/' + Clubid + '/activities'  + '?access_token=' + access_token + '&per_page=200' + '&page=' + str(page))
     r = requests.get(f"{url}/{Clubid}/activities?access_token={access_token}&per_page=200&page={str(page)}")
     if r.status_code == 400:
@@ -158,14 +159,15 @@ while page <= 12 :
 
     r = r.json()
     with open('club_activities.json', 'a') as outfile:
-        json.dump(r, outfile)
+        logging.debug(json.dump(r, outfile))
 
     if (not r):
         break
     
     # otherwise add new data to dataframe
-    # debug('line:',x)
+    logging.debug('line:',x)
     for x in range(len(r)):
+        logging.debug(f"Debugging Club activities: {r[x]['athlete']['firstname']} {r[x]['athlete']['lastname']} activity: {r[x]['name']}")
         try:
             if pattern.search(r[x]['name']):
                 # club_activities.loc[x + (page-1)*200,'id'] = str(page) + str(r[x])
@@ -206,7 +208,7 @@ except Exception as e:
 # Open the Google Sheets document
 spreadsheet_key = os.environ['GOOGLE_SHEETS_SPREADSHEET_KEY']
 if not spreadsheet_key:
-    print("Spreadsheet key not found in environment variables")
+    logging.error("Spreadsheet key not found in environment variables")
     exit(1)
 
 spreadsheet = client.open_by_key(spreadsheet_key)
@@ -216,7 +218,7 @@ try:
     elevation_sheet = spreadsheet.worksheet("Ramsays Records")
     club_sheet = spreadsheet.worksheet("Club Activities")
 except gspread.exceptions.WorksheetNotFound as e:
-    print(f"Worksheet not found: {e}")
+    logging.error(f"Worksheet not found: {e}")
     # elevation_sheet = spreadsheet.add_worksheet(title="Elevation", rows="100", cols="6")
     # distance_sheet = spreadsheet.add_worksheet(title="Distance", rows="100", cols="6")
     exit(1)
