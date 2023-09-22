@@ -21,7 +21,7 @@ import pandas as pd
 import requests
 
 logging.basicConfig(
-    format='%(asctime)s %(levelname)-8s [%(pathname)s:%(lineno)d in function %(funcName)s] %(message)s',
+    format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d in function %(funcName)s] %(message)s',
     datefmt='%Y-%m-%d:%H:%M:%S',
     level=logging.DEBUG
 )
