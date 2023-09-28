@@ -104,8 +104,8 @@ while True:
 # Convert 'start_date_local' to datetime format
 activities['start_date_local'] = pd.to_datetime(activities['start_date_local'])
 
-# Create 'Simple Date' column with date in MM/DD/YYYY format
-activities['Simple Date'] = activities['start_date_local'].dt.strftime('%m/%d/%Y')
+# Create 'simple_date' column with date in MM/DD/YYYY format
+activities['simple_date'] = activities['start_date_local'].dt.strftime('%m/%d/%Y')
 
 # Create 'Asterisk' column based on me flagging a run as having an "EC" or Starting before Start time
 activities['asterisk'] = ((activities['name'].str.contains(r'\sEC$', regex=True, case=False)) | 
@@ -182,7 +182,6 @@ while page <= 12 :
 logger.info("{substring} Activities")
 
 # club_activities[['athlete','name','distance','moving_time','elapsed_time','total_elevation_gain']].sort_values(by='distance',ascending=False).to_csv('PAX_HD_Excercises.csv', mode='a', header=False)
-
 # -- ----------------------------------------------------------------------------------------
 
 # Load credentials from environment variable (GitHub secret)
@@ -224,7 +223,7 @@ existing_elevation_data = pd.DataFrame(elevation_sheet.get_all_records())
 existing_club_data = pd.DataFrame(club_sheet.get_all_records())
 
 # # Create separate dataframes for elevation and distance leaderboard
-elevation_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain','Simple Date','asterisk','QiC']].sort_values(by='total_elevation_gain',ascending=False)
+elevation_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain','simple_date','asterisk','QiC']].sort_values(by='total_elevation_gain',ascending=False)
 club_leaderboard_df = club_activities[['athlete','name','distance','moving_time','elapsed_time','total_elevation_gain']].sort_values(by='distance',ascending=False)
 
 # Concatenate new data to existing data
@@ -232,10 +231,10 @@ updated_elevation_data = pd.concat([existing_elevation_data, elevation_leaderboa
 updated_club_data = pd.concat([existing_club_data, club_leaderboard_df], ignore_index=True)
 
 # De-duplicate keeping latest
-updated_elevation_data = updated_elevation_data.drop_duplicates(subset=['name','start_date_local'],keep='last')
+updated_elevation_data = updated_elevation_data.drop_duplicates(subset=['name','simple_date'],keep='last')
 updated_club_data = updated_club_data.drop_duplicates(subset=['athlete','name','distance','moving_time','elapsed_time','total_elevation_gain'],keep='last')
 
-logger.info(updated_elevation_data[updated_elevation_data.duplicated(subset=['name', 'start_date_local'], keep=False)])
+logger.info(updated_elevation_data[updated_elevation_data.duplicated(subset=['name', 'simple_date'], keep=False)])
 logger.info(updated_club_data[updated_club_data.duplicated(subset=['athlete', 'name'], keep=False)])
 
 # Clear the sheets before uploading the updated data
