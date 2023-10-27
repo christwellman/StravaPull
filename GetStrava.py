@@ -222,8 +222,30 @@ except gspread.exceptions.WorksheetNotFound as e:
     exit(1)
 
 # Read existing data into dataframes
-existing_elevation_data = pd.DataFrame(elevation_sheet.get_all_records())
-existing_club_data = pd.DataFrame(club_sheet.get_all_records())
+try:
+    sheet_records = elevation_sheet.get_all_records()
+    if sheet_records:
+        existing_elevation_data = pd.DataFrame(sheet_records)
+    else:
+        existing_elevation_data = pd.DataFrame()  # or set up a DataFrame with appropriate columns but no data
+except IndexError as e:
+    logger.error(f"Error reading data from the sheet: {e}")
+    # Handle the error (e.g., skip processing this sheet or initialize an empty DataFrame)
+
+# Read existing data into dataframes
+try:
+    sheet_records = club_sheet.get_all_records()
+    if sheet_records:
+        existing_club_data = pd.DataFrame(sheet_records)
+    else:
+        existing_club_data = pd.DataFrame()  # or set up a DataFrame with appropriate columns but no data
+except IndexError as e:
+    logger.error(f"Error reading data from the sheet: {e}")
+    # Handle the error (e.g., skip processing this sheet or initialize an empty DataFrame)
+    
+
+# existing_elevation_data = pd.DataFrame(elevation_sheet.get_all_records())
+# existing_club_data = pd.DataFrame(club_sheet.get_all_records())
 
 # # Create separate dataframes for Club and Ramsay data
 elevation_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain','simple_date','asterisk','QiC']].sort_values(by='total_elevation_gain',ascending=False)
