@@ -228,7 +228,7 @@ try:
         existing_elevation_data = pd.DataFrame(sheet_records)
     else:
         existing_elevation_data = pd.DataFrame()  # or set up a DataFrame with appropriate columns but no data
-except IndexError as e:
+except gspread.exceptions.GSpreadException as e:  # Catch more specific exceptions if possible
     logger.error(f"Error reading data from the sheet: {e}")
     # Handle the error (e.g., skip processing this sheet or initialize an empty DataFrame)
 
@@ -239,7 +239,7 @@ try:
         existing_club_data = pd.DataFrame(sheet_records)
     else:
         existing_club_data = pd.DataFrame()  # or set up a DataFrame with appropriate columns but no data
-except IndexError as e:
+except gspread.exceptions.GSpreadException as e:  # Catch more specific exceptions if possible
     logger.error(f"Error reading data from the sheet: {e}")
     # Handle the error (e.g., skip processing this sheet or initialize an empty DataFrame)
     
