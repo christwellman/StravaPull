@@ -234,8 +234,11 @@ updated_elevation_data = pd.concat([existing_elevation_data, elevation_leaderboa
 updated_club_data = pd.concat([existing_club_data, club_leaderboard_df], ignore_index=True)
 
 # fix rounding issue on distance
-elevation_leaderboard_df['distance'] = elevation_leaderboard_df['distance'].round(7)
-club_leaderboard_df['distance'] = club_leaderboard_df['distance'].round(7)
+elevation_leaderboard_df['distance'] = elevation_leaderboard_df['distance'].apply(lambda x: round(x, 7) if pd.notnull(x) else x)
+club_leaderboard_df['distance'] = club_leaderboard_df['distance'].apply(lambda x: round(x, 7) if pd.notnull(x) else x)
+
+# elevation_leaderboard_df['distance'] = elevation_leaderboard_df['distance'].round(7)
+# club_leaderboard_df['distance'] = club_leaderboard_df['distance'].round(7)
 
 # De-duplicate keeping latest
 updated_elevation_data = updated_elevation_data.drop_duplicates(subset=['name','simple_date'],keep='last')
