@@ -9,7 +9,7 @@ import json
 import logging
 # import time
 import re
-from datetime import datetime
+from datetime import datetime, date
 from distutils.log import debug
 
 import gspread
@@ -181,6 +181,9 @@ while page <= 12 :
     page += 1
 logger.info("{substring} Activities")
 
+# Create 'simple_date' column with date in MM/DD/YYYY format
+club_activities['date'] = date.today()
+
 # club_activities[['athlete','name','distance','moving_time','elapsed_time','total_elevation_gain']].sort_values(by='distance',ascending=False).to_csv('PAX_HD_Excercises.csv', mode='a', header=False)
 # -- ----------------------------------------------------------------------------------------
 
@@ -222,20 +225,24 @@ except gspread.exceptions.WorksheetNotFound as e:
 existing_elevation_data = pd.DataFrame(elevation_sheet.get_all_records())
 existing_club_data = pd.DataFrame(club_sheet.get_all_records())
 
-# # Create separate dataframes for elevation and distance leaderboard
+# # Create separate dataframes for Club and Ramsay data
 elevation_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain','simple_date','asterisk','QiC']].sort_values(by='total_elevation_gain',ascending=False)
-club_leaderboard_df = club_activities[['athlete','name','distance','moving_time','elapsed_time','total_elevation_gain']].sort_values(by='distance',ascending=False)
+club_leaderboard_df = club_activities[['date','athlete','name','distance','moving_time','elapsed_time','total_elevation_gain']].sort_values(by='distance',ascending=False)
 
 # Concatenate new data to existing data
 updated_elevation_data = pd.concat([existing_elevation_data, elevation_leaderboard_df], ignore_index=True)
 updated_club_data = pd.concat([existing_club_data, club_leaderboard_df], ignore_index=True)
 
+# fix rounding issue on distance
+elevation_leaderboard_df['distance'] = elevation_leaderboard_df['distance'].round(7)
+club_leaderboard_df['distance'] = club_leaderboard_df['distance'].round(7)
+
 # De-duplicate keeping latest
 updated_elevation_data = updated_elevation_data.drop_duplicates(subset=['name','simple_date'],keep='last')
 updated_club_data = updated_club_data.drop_duplicates(subset=['athlete','name','distance','moving_time','elapsed_time','total_elevation_gain'],keep='last')
 
-logger.info(updated_elevation_data[updated_elevation_data.duplicated(subset=['name', 'simple_date'], keep=False)])
-logger.info(updated_club_data[updated_club_data.duplicated(subset=['athlete', 'name'], keep=False)])
+logger.info(updated_elevation_data[updated_elevation_data.duplicated(subset=['name', 'simple_date','distance','total_elevation_gain'], keep=False)])
+logger.info(updated_club_data[updated_club_data.duplicated(subset=['athlete', 'name','distance','total_elevation_gain'], keep=False)])
 
 # Clear the sheets before uploading the updated data
 elevation_sheet.clear()
