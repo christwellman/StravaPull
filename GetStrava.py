@@ -224,13 +224,18 @@ except gspread.exceptions.WorksheetNotFound as e:
 # Read existing data into dataframes
 try:
     sheet_records = elevation_sheet.get_all_records()
-    if sheet_records:
-        existing_elevation_data = pd.DataFrame(sheet_records)
-    else:
-        existing_elevation_data = pd.DataFrame()  # or set up a DataFrame with appropriate columns but no data
-except gspread.exceptions.GSpreadException as e:  # Catch more specific exceptions if possible
-    logger.error(f"Error reading data from the sheet: {e}")
-    # Handle the error (e.g., skip processing this sheet or initialize an empty DataFrame)
+    existing_elevation_data = pd.DataFrame(sheet_records)
+
+    # if sheet_records:
+    #     existing_elevation_data = pd.DataFrame(sheet_records)
+    # else:
+    #     existing_elevation_data = pd.DataFrame()  # or set up a DataFrame with appropriate columns but no data
+# except gspread.exceptions.GSpreadException as e:  # Catch more specific exceptions if possible
+#     logger.error(f"Error reading data from the sheet: {e}")
+#     # Handle the error (e.g., skip processing this sheet or initialize an empty DataFrame)
+except Exception as e:
+    logging.error(f"Error reading data from the sheet: {e}")
+    existing_elevation_data = pd.DataFrame()  # Initialize as empty DataFrame if there's an error
 
 # Read existing data into dataframes
 try:
@@ -252,12 +257,19 @@ elevation_leaderboard_df = activities[['name','start_date_local','distance','tot
 club_leaderboard_df = club_activities[['date','athlete','name','distance','moving_time','elapsed_time','total_elevation_gain']].sort_values(by='distance',ascending=False)
 
 # Concatenate new data to existing data
-updated_elevation_data = pd.concat([existing_elevation_data, elevation_leaderboard_df], ignore_index=True)
+if 'existing_elevation_data' in locals() and 'elevation_leaderboard_df' in locals():
+    updated_elevation_data = pd.concat([existing_elevation_data, elevation_leaderboard_df], ignore_index=True)
+    updated_elevation_data['distance'] = updated_elevation_data['distance'].apply(lambda x: round(x, 7) if pd.notnull(x) else x)
+    updated_elevation_data['total_elevation_gain'] = updated_elevation_data['total_elevation_gain'].apply(lambda x: round(x, 7) if pd.notnull(x) else x)
+
+else:
+    logging.error("One or both DataFrames are not defined.")
+
 updated_club_data = pd.concat([existing_club_data, club_leaderboard_df], ignore_index=True)
 
-# fix rounding issue on distance
-elevation_leaderboard_df['distance'] = elevation_leaderboard_df['distance'].apply(lambda x: round(x, 7) if pd.notnull(x) else x)
+# fix rounding issue on distance and elevlation gain
 club_leaderboard_df['distance'] = club_leaderboard_df['distance'].apply(lambda x: round(x, 7) if pd.notnull(x) else x)
+club_leaderboard_df['total_elevation_gain'] = club_leaderboard_df['total_elevation_gain'].apply(lambda x: round(x, 7) if pd.notnull(x) else x)
 
 # elevation_leaderboard_df['distance'] = elevation_leaderboard_df['distance'].round(7)
 # club_leaderboard_df['distance'] = club_leaderboard_df['distance'].round(7)
