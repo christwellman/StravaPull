@@ -244,7 +244,7 @@ except gspread.exceptions.GSpreadException as e:  # Catch more specific exceptio
     # Handle the error (e.g., skip processing this sheet or initialize an empty DataFrame)
     
 
-# existing_elevation_data = pd.DataFrame(elevation_sheet.get_all_records())
+existing_elevation_data = pd.DataFrame(elevation_sheet.get_all_records())
 # existing_club_data = pd.DataFrame(club_sheet.get_all_records())
 
 # # Create separate dataframes for Club and Ramsay data
