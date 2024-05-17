@@ -263,7 +263,7 @@ if 'existing_elevation_data' in locals() and 'elevation_leaderboard_df' in local
     updated_elevation_data['total_elevation_gain'] = updated_elevation_data['total_elevation_gain'].apply(lambda x: round(x, 7) if pd.notnull(x) else x)
 
 else:
-    logging.error("One or both DataFrames are not defined.")
+    logging.error("One or both DataFrames are undefined.")
 
 updated_club_data = pd.concat([existing_club_data, club_leaderboard_df], ignore_index=True)
 
