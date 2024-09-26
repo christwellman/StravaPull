@@ -7,7 +7,9 @@
 import os
 import json
 import logging
-# import time
+
+from requests.exceptions import JSONDecodeError
+
 import re
 from datetime import datetime, date
 from distutils.log import debug
@@ -217,36 +219,40 @@ try:
     club_sheet = spreadsheet.worksheet("Club Activities")
 except gspread.exceptions.WorksheetNotFound as e:
     logger.error(f"Worksheet not found: {e}")
-    # elevation_sheet = spreadsheet.add_worksheet(title="Elevation", rows="100", cols="6")
-    # distance_sheet = spreadsheet.add_worksheet(title="Distance", rows="100", cols="6")
     exit(1)
+
 
 # Read existing data into dataframes
 try:
     sheet_records = elevation_sheet.get_all_records()
     existing_elevation_data = pd.DataFrame(sheet_records)
-
-    # if sheet_records:
-    #     existing_elevation_data = pd.DataFrame(sheet_records)
-    # else:
-    #     existing_elevation_data = pd.DataFrame()  # or set up a DataFrame with appropriate columns but no data
-# except gspread.exceptions.GSpreadException as e:  # Catch more specific exceptions if possible
-#     logger.error(f"Error reading data from the sheet: {e}")
-#     # Handle the error (e.g., skip processing this sheet or initialize an empty DataFrame)
+except gspread.exceptions.APIError as e:
+    logger.error(f"API Error when reading sheet: {e}")
+    logger.error(f"Response content: {e.response.content}")
+    existing_elevation_data = pd.DataFrame()
+except JSONDecodeError as e:
+    logger.error(f"JSON Decode Error: {e}")
+    logger.error(f"Response content: {elevation_sheet.client.last_response.content}")
+    existing_elevation_data = pd.DataFrame()
 except Exception as e:
-    logging.error(f"Error reading data from the sheet: {e}")
-    existing_elevation_data = pd.DataFrame()  # Initialize as empty DataFrame if there's an error
+    logger.error(f"Unexpected error reading data from the sheet: {e}")
+    existing_elevation_data = pd.DataFrame()
 
-# Read existing data into dataframes
+# Repeat the same error handling for club_sheet
 try:
     sheet_records = club_sheet.get_all_records()
-    if sheet_records:
-        existing_club_data = pd.DataFrame(sheet_records)
-    else:
-        existing_club_data = pd.DataFrame()  # or set up a DataFrame with appropriate columns but no data
-except gspread.exceptions.GSpreadException as e:  # Catch more specific exceptions if possible
-    logger.error(f"Error reading data from the sheet: {e}")
-    # Handle the error (e.g., skip processing this sheet or initialize an empty DataFrame)
+    existing_club_data = pd.DataFrame(sheet_records)
+except gspread.exceptions.APIError as e:
+    logger.error(f"API Error when reading club sheet: {e}")
+    logger.error(f"Response content: {e.response.content}")
+    existing_club_data = pd.DataFrame()
+except JSONDecodeError as e:
+    logger.error(f"JSON Decode Error in club sheet: {e}")
+    logger.error(f"Response content: {club_sheet.client.last_response.content}")
+    existing_club_data = pd.DataFrame()
+except Exception as e:
+    logger.error(f"Unexpected error reading data from the club sheet: {e}")
+    existing_club_data = pd.DataFrame()
     
 
 existing_elevation_data = pd.DataFrame(elevation_sheet.get_all_records())
