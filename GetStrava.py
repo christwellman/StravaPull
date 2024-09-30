@@ -281,7 +281,7 @@ club_leaderboard_df['total_elevation_gain'] = club_leaderboard_df['total_elevati
 # club_leaderboard_df['distance'] = club_leaderboard_df['distance'].round(7)
 
 # De-duplicate keeping latest
-updated_elevation_data = updated_elevation_data.drop_duplicates(subset=['name','simple_date'],keep='last')
+updated_elevation_data = updated_elevation_data.drop_duplicates(subset=['name','start_date_local','total_elevation_gain'],keep='last')
 updated_club_data = updated_club_data.drop_duplicates(subset=['athlete','name','moving_time','elapsed_time','total_elevation_gain'],keep='last')
 
 logger.info(updated_elevation_data[updated_elevation_data.duplicated(subset=['name', 'simple_date','distance','total_elevation_gain'], keep=False)])
