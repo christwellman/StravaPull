@@ -277,9 +277,6 @@ updated_club_data = pd.concat([existing_club_data, club_leaderboard_df], ignore_
 club_leaderboard_df['distance'] = club_leaderboard_df['distance'].apply(lambda x: round(x, 7) if pd.notnull(x) else x)
 club_leaderboard_df['total_elevation_gain'] = club_leaderboard_df['total_elevation_gain'].apply(lambda x: round(x, 7) if pd.notnull(x) else x)
 
-# elevation_leaderboard_df['distance'] = elevation_leaderboard_df['distance'].round(7)
-# club_leaderboard_df['distance'] = club_leaderboard_df['distance'].round(7)
-
 # De-duplicate keeping latest
 updated_elevation_data = updated_elevation_data.drop_duplicates(subset=['name','start_date_local','total_elevation_gain'],keep='last')
 updated_club_data = updated_club_data.drop_duplicates(subset=['athlete','name','moving_time','elapsed_time','total_elevation_gain'],keep='last')
