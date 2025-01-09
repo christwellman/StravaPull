@@ -7,18 +7,12 @@
 import os
 import json
 import logging
-
 from requests.exceptions import JSONDecodeError
-
 import re
 from datetime import datetime, date
-from distutils.log import debug
-
 import gspread
-
 from gspread_dataframe import set_with_dataframe
 from oauth2client.service_account import ServiceAccountCredentials
-
 import pandas as pd
 import requests
 
@@ -39,6 +33,14 @@ client_id = os.environ.get('STRAVA_CLIENT_ID')
 client_secret = os.environ.get('STRAVA_CLIENT_SECRET')
 refresh_token = os.getenv('STRAVA_REFRESH_TOKEN')
 
+# Check if credentials are available
+if not all([client_id, client_secret, refresh_token]):
+    logger.error("Missing Strava credentials in environment variables")
+    logger.error(f"Client ID: {'Present' if client_id else 'Missing'}")
+    logger.error(f"Client Secret: {'Present' if client_secret else 'Missing'}")
+    logger.error(f"Refresh Token: {'Present' if refresh_token else 'Missing'}")
+    raise ValueError("Missing required Strava credentials")
+
 response = requests.post(
     url='https://www.strava.com/oauth/token',
     data={
@@ -48,7 +50,21 @@ response = requests.post(
         'refresh_token': refresh_token
     }
 )
-logger.debug(response)
+
+# Check response status
+if response.status_code != 200:
+    logger.error(f"Strava authentication failed with status code: {response.status_code}")
+    logger.error(f"Response content: {response.text}")
+    raise Exception("Failed to authenticate with Strava")
+
+try:
+    strava_tokens = response.json()
+    access_token = strava_tokens['access_token']
+    logger.debug(f"Successfully obtained access token: {access_token[:10]}...")
+except (JSONDecodeError, KeyError) as e:
+    logger.error(f"Failed to parse Strava response: {e}")
+    logger.error(f"Response content: {response.text}")
+    raise
 
 #Save response as json in new variable
 new_strava_tokens = response.json()
