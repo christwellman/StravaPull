@@ -64,7 +64,7 @@ class StravaDataFetcher:
     def fetch_activities(self):
         """Fetch Strava activities based on name pattern."""
         pattern = re.compile(r'half\s*dome', re.IGNORECASE)
-        activities = pd.DataFrame(columns=self.activity_columns())
+        activities_list = []
 
         page = 1
         url = "https://www.strava.com/api/v3/activities"
@@ -89,9 +89,10 @@ class StravaDataFetcher:
             
             for activity in activities_json:
                 if isinstance(activity, dict) and pattern.search(activity.get('name', '')):
-                    activities = activities.append(self.process_activity(activity), ignore_index=True)
+                    activities_list.append(self.process_activity(activity))
             page += 1
             
+        activities = pd.DataFrame(activities_list)
         activities['start_date_local'] = pd.to_datetime(activities['start_date_local'])
         return activities
     
