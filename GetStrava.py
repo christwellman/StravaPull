@@ -1,21 +1,20 @@
-# /usr/local/bin/python3.9
-# Pulls MY Strava Data for posts including "Half Dome" and logs to a google sheeet
-# todo: Pull from everyone in the club
-    #  Average club distance for the day 
-    #  Exclude anything with "EC"
-    #  Better fuzzy matching of "Half Dome"
+#!/usr/local/bin/python3.9
+
 import os
 import json
 import logging
-from requests.exceptions import JSONDecodeError
 import re
-from datetime import datetime, date
+from requests.exceptions import JSONDecodeError
+from datetime import date
 import gspread
 from gspread_dataframe import set_with_dataframe
 from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 import requests
+from dotenv import load_dotenv
+load_dotenv()
 
+# Set up logging
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d in function %(funcName)s] %(message)s',
     datefmt='%Y-%m-%d:%H:%M:%S',
@@ -24,59 +23,82 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-#Activity Name 
-pattern = re.compile(r'half\s*dome', re.IGNORECASE)
+class StravaDataFetcher:
+    def __init__(self):
+        self.client_id = os.environ.get('STRAVA_CLIENT_ID')
+        self.client_secret = os.environ.get('STRAVA_CLIENT_SECRET')
+        self.refresh_token = os.getenv('STRAVA_REFRESH_TOKEN')
+        self.access_token = self.authenticate()
+    
+    def authenticate(self):
+        """Authenticate with Strava API and obtain access token."""
+        if not all([self.client_id, self.client_secret, self.refresh_token]):
+            logger.error("Missing Strava credentials in environment variables")
+            raise ValueError("Missing required Strava credentials")
+        
+        response = requests.post(
+            url='https://www.strava.com/oauth/token',
+            data={
+                'client_id': self.client_id,
+                'client_secret': self.client_secret,
+                'grant_type': 'refresh_token',
+                'refresh_token': self.refresh_token
+            }
+        )
+        
+        if response.status_code != 200:
+            logger.error(f"Strava authentication failed with status code: {response.status_code}")
+            logger.error(f"Response content: {response.text}")
+            raise Exception("Failed to authenticate with Strava")
+        
+        try:
+            strava_tokens = response.json()
+            access_token = strava_tokens['access_token']
+            logger.debug(f"Successfully obtained access token: {access_token[:10]}...")
+            return access_token
+        except (JSONDecodeError, KeyError) as e:
+            logger.error(f"Failed to parse Strava response: {e}")
+            logger.error(f"Response content: {response.text}")
+            raise
+        
+    def fetch_activities(self):
+        """Fetch Strava activities based on name pattern."""
+        pattern = re.compile(r'half\s*dome', re.IGNORECASE)
+        activities = pd.DataFrame(columns=self.activity_columns())
 
+        page = 1
+        url = "https://www.strava.com/api/v3/activities"
 
-# Get credentials from environment variables
-client_id = os.environ.get('STRAVA_CLIENT_ID')
-client_secret = os.environ.get('STRAVA_CLIENT_SECRET')
-refresh_token = os.getenv('STRAVA_REFRESH_TOKEN')
-
-# Check if credentials are available
-if not all([client_id, client_secret, refresh_token]):
-    logger.error("Missing Strava credentials in environment variables")
-    logger.error(f"Client ID: {'Present' if client_id else 'Missing'}")
-    logger.error(f"Client Secret: {'Present' if client_secret else 'Missing'}")
-    logger.error(f"Refresh Token: {'Present' if refresh_token else 'Missing'}")
-    raise ValueError("Missing required Strava credentials")
-
-response = requests.post(
-    url='https://www.strava.com/oauth/token',
-    data={
-        'client_id': client_id,
-        'client_secret': client_secret,
-        'grant_type': 'refresh_token',
-        'refresh_token': refresh_token
-    }
-)
-
-# Check response status
-if response.status_code != 200:
-    logger.error(f"Strava authentication failed with status code: {response.status_code}")
-    logger.error(f"Response content: {response.text}")
-    raise Exception("Failed to authenticate with Strava")
-
-try:
-    strava_tokens = response.json()
-    access_token = strava_tokens['access_token']
-    logger.debug(f"Successfully obtained access token: {access_token[:10]}...")
-except (JSONDecodeError, KeyError) as e:
-    logger.error(f"Failed to parse Strava response: {e}")
-    logger.error(f"Response content: {response.text}")
-    raise
-
-#Save response as json in new variable
-new_strava_tokens = response.json()
-strava_tokens = new_strava_tokens
-
-#Loop through all activities
-page = 1
-url = "https://www.strava.com/api/v3/activities"
-access_token = strava_tokens['access_token']
-## Create the dataframe ready for the API call to store your activity data
-activities = pd.DataFrame(
-    columns = [
+        while True:
+            try:
+                headers = {'Authorization': f'Bearer {self.access_token}'}
+                r = requests.get(f"{url}?per_page=200&page={page}", headers=headers)
+                r.raise_for_status()
+                activities_json = r.json()
+                logger.debug(f"API Response (Page {page}): {activities_json}")
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Failed to fetch activities: {e}")
+                break
+            except JSONDecodeError as e:
+                logger.error(f"Failed to decode JSON response: {e}")
+                break
+                
+            if not isinstance(activities_json, list):
+                logger.error("API response is not a list of activities.")
+                break
+            
+            for activity in activities_json:
+                if isinstance(activity, dict) and pattern.search(activity.get('name', '')):
+                    activities = activities.append(self.process_activity(activity), ignore_index=True)
+            page += 1
+            
+        activities['start_date_local'] = pd.to_datetime(activities['start_date_local'])
+        return activities
+    
+    @staticmethod
+    def activity_columns():
+        """Define activity DataFrame columns."""
+        return [
             "id",
             "name",
             "start_date_local",
@@ -87,225 +109,55 @@ activities = pd.DataFrame(
             "total_elevation_gain",
             "end_latlng",
             "external_id"
-    ]
-)
-while True:
+        ]
     
-    # get page of activities from Strava
-    r = requests.get(f"{url}?access_token={access_token}&per_page=200&page={page}")
-    r = r.json()
-    logger.debug(r)
-    # print(r)
-    with open('athlete_activities.json', 'a') as outfile:
-        logger.debug(json.dump(r, outfile))
-# if no results then exit loop
-    if (not r):
-        break
-    
-    # otherwise add new data to dataframe
-    for x in range(len(r)):
-        if pattern.search(r[x]['name']):
-            activities.loc[x + (page-1)*200,'id'] = r[x]['id']
-            activities.loc[x + (page-1)*200,'name'] = r[x]['name']
-            activities.loc[x + (page-1)*200,'start_date_local'] = r[x]['start_date_local']
-            activities.loc[x + (page-1)*200,'type'] = r[x]['type']
-            activities.loc[x + (page-1)*200,'distance'] = r[x]['distance']*0.000621371 # convert Meters to miles
-            activities.loc[x + (page-1)*200,'moving_time'] = r[x]['moving_time']
-            activities.loc[x + (page-1)*200,'elapsed_time'] = r[x]['elapsed_time']
-            activities.loc[x + (page-1)*200,'total_elevation_gain'] = r[x]['total_elevation_gain']*3.28084 # convert Meters to feet
-            activities.loc[x + (page-1)*200,'end_latlng'] = r[x]['end_latlng']
-            activities.loc[x + (page-1)*200,'external_id'] = r[x]['external_id']
-# increment page
-    page += 1
+    @staticmethod
+    def process_activity(activity):
+        """Process individual activity data."""
+        return {
+            "id": activity['id'],
+            "name": activity['name'],
+            "start_date_local": activity['start_date_local'],
+            "type": activity['type'],
+            "distance": activity['distance'] * 0.000621371,  # Convert Meters to miles
+            "moving_time": activity['moving_time'],
+            "elapsed_time": activity['elapsed_time'],
+            "total_elevation_gain": activity['total_elevation_gain'] * 3.28084,  # Convert Meters to feet
+            "end_latlng": activity['end_latlng'],
+            "external_id": activity['external_id']
+        }
 
-# Data Cleanup/Manuplation
-# Convert 'start_date_local' to datetime format
-activities['start_date_local'] = pd.to_datetime(activities['start_date_local'])
+class GoogleSheetsHandler:
+    def __init__(self):
+        self.credentials_json = os.environ['GOOGLE_SHEETS_CREDENTIALS']
+        self.spreadsheet_key = os.environ['GOOGLE_SHEETS_SPREADSHEET_KEY']
+        self.client = self.authorize_google_sheets()
 
-# Create 'simple_date' column with date in MM/DD/YYYY format
-activities['simple_date'] = activities['start_date_local'].dt.strftime('%m/%d/%Y')
+    def authorize_google_sheets(self):
+        """Authorize Google Sheets API."""
+        credentials_json_dict = json.loads(self.credentials_json.replace('\n', ' '))
+        scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/drive']
+        credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_json_dict, scope)
+        return gspread.authorize(credentials)
 
-# Create 'Asterisk' column based on me flagging a run as having an "EC" or Starting before Start time
-activities['asterisk'] = ((activities['name'].str.contains(r'\sEC$', regex=True, case=False)) | 
-                          (activities['start_date_local'].dt.time < pd.to_datetime('05:25:00').time()))
-
-# Convert 'asterisk' column to boolean type
-activities['asterisk'] = activities['asterisk'].astype(bool)
-
-# Extract substring between "dome:" and " Q" to create 'QiC' column
-activities['QiC'] = activities['name'].str.extract(':(.*?) Q', flags=re.IGNORECASE)
-activities['QiC'] = activities['QiC'].str.strip()
-activities.loc[activities['QiC'] == 'YHC', 'QiC'] = 'Ramsay'
-
-# -- ----------------------------------------------------------------------------------------
-# Get Club Activities
-
-# /clubs/{id}/activities
-#Loop through all activities
-page = 1
-url = "https://www.strava.com/api/v3/clubs"
-
-access_token = strava_tokens['access_token']
-# 'id': 326452, 'resource_state': 2, 'name': 'F3 Carpex' fetched from above "Get Athlete Club"
-Clubid = '326452'
-
-# Create the dataframe ready for the API call to store your activity data
-club_activities = pd.DataFrame(
-    columns = [
-            # "id",
-            "athlete",
-            "name",
-            "distance",
-            "moving_time",
-            "elapsed_time",
-            "total_elevation_gain"
-    ]
-)
-
-
-while page <= 12 :
-    # https://www.strava.com/api/v3/clubs/{id}/activities?page=&per_page=" "Authorization: Bearer [[token]]"
-    logger.debug(f"{Clubid} + '/activities'  + '&per_page=200' + '&{page}=' + str({page})")
-    # r = requests.get(url + '/' + Clubid + '/activities'  + '?access_token=' + access_token + '&per_page=200' + '&page=' + str(page))
-    r = requests.get(f"{url}/{Clubid}/activities?access_token={access_token}&per_page=200&page={str(page)}")
-    if r.status_code == 400:
-        logger.error(r.content)
-
-    r = r.json()
-    with open('club_activities.json', 'a') as outfile:
-        logger.debug(json.dump(r, outfile))
-
-    if (not r):
-        break
-    
-    # otherwise add new data to dataframe
-    logger.debug('line:',x)
-    for x in range(len(r)):
-        logger.debug(f"Debugging Club activities: {r[x]['athlete']['firstname']} {r[x]['athlete']['lastname']} activity: {r[x]['name']}")
+    def upload_data(self, data, sheet_name):
+        """Upload data to the specified Google Sheets worksheet."""
         try:
-            if pattern.search(r[x]['name']):
-                # club_activities.loc[x + (page-1)*200,'id'] = str(page) + str(r[x])
-                club_activities.loc[x + (page-1)*200,'athlete'] = r[x]['athlete']['firstname'] + ' ' + r[x]['athlete']['lastname']
-                club_activities.loc[x + (page-1)*200,'name'] = r[x]['name']
-                club_activities.loc[x + (page-1)*200,'distance'] = r[x]['distance']*0.000621371 # convert Meters to miles
-                club_activities.loc[x + (page-1)*200,'moving_time'] = r[x]['moving_time']
-                club_activities.loc[x + (page-1)*200,'elapsed_time'] = r[x]['elapsed_time']
-                club_activities.loc[x + (page-1)*200,'total_elevation_gain'] = r[x]['total_elevation_gain']*3.28084 # convert Meters to feet
-        except KeyError as e:
-            logger.error(f"KeyError: {e}")
+            spreadsheet = self.client.open_by_key(self.spreadsheet_key)
+            worksheet = spreadsheet.worksheet(sheet_name)
+            worksheet.clear()  # Clear existing data
+            set_with_dataframe(worksheet, data, include_index=False, include_column_header=True, resize=True)
+        except gspread.exceptions.WorksheetNotFound as e:
+            logger.error(f"Worksheet not found: {e}")
         except Exception as e:
-            logger.error(f"An unexpected error occurred: {e}")
+            logger.error(f"An error occurred: {e}")
 
-    page += 1
-logger.info("{substring} Activities")
+def main():
+    strava_fetcher = StravaDataFetcher()
+    activities = strava_fetcher.fetch_activities()
 
-# Create 'simple_date' column with date in MM/DD/YYYY format
-club_activities['date'] = date.today()
+    google_sheets_handler = GoogleSheetsHandler()
+    google_sheets_handler.upload_data(activities, "Ramsay's Records")
 
-# club_activities[['athlete','name','distance','moving_time','elapsed_time','total_elevation_gain']].sort_values(by='distance',ascending=False).to_csv('PAX_HD_Excercises.csv', mode='a', header=False)
-# -- ----------------------------------------------------------------------------------------
-
-# Load credentials from environment variable (GitHub secret)
-credentials_json = os.environ['GOOGLE_SHEETS_CREDENTIALS']
-credentials_json = credentials_json.replace('\n', ' ')
-credentials_json_dict = json.loads(credentials_json)
-
-try:
-    scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/drive']
-    credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_json_dict, scope)
-    client = gspread.authorize(credentials)
-except json.JSONDecodeError as e:
-    logger.error(f"JSON Decode Error: {e}")
-    exit(1)  # This will exit the script if an error occurs
-except Exception as e:
-    logger.error(f"An error occurred: {e}")
-    exit(1)  # This will exit the script if an error occurs
-
-# Open the Google Sheets document
-spreadsheet_key = os.environ['GOOGLE_SHEETS_SPREADSHEET_KEY']
-if not spreadsheet_key:
-    logger.error("Spreadsheet key not found in environment variables")
-    exit(1)
-
-spreadsheet = client.open_by_key(spreadsheet_key)
-
-# Get references to the existing sheets by title
-try:
-    elevation_sheet = spreadsheet.worksheet("Ramsays Records")
-    club_sheet = spreadsheet.worksheet("Club Activities")
-except gspread.exceptions.WorksheetNotFound as e:
-    logger.error(f"Worksheet not found: {e}")
-    exit(1)
-
-
-# Read existing data into dataframes
-try:
-    sheet_records = elevation_sheet.get_all_records()
-    existing_elevation_data = pd.DataFrame(sheet_records)
-except gspread.exceptions.APIError as e:
-    logger.error(f"API Error when reading sheet: {e}")
-    logger.error(f"Response content: {e.response.content}")
-    existing_elevation_data = pd.DataFrame()
-except JSONDecodeError as e:
-    logger.error(f"JSON Decode Error: {e}")
-    logger.error(f"Response content: {elevation_sheet.client.last_response.content}")
-    existing_elevation_data = pd.DataFrame()
-except Exception as e:
-    logger.error(f"Unexpected error reading data from the sheet: {e}")
-    existing_elevation_data = pd.DataFrame()
-
-# Repeat the same error handling for club_sheet
-try:
-    sheet_records = club_sheet.get_all_records()
-    existing_club_data = pd.DataFrame(sheet_records)
-except gspread.exceptions.APIError as e:
-    logger.error(f"API Error when reading club sheet: {e}")
-    logger.error(f"Response content: {e.response.content}")
-    existing_club_data = pd.DataFrame()
-except JSONDecodeError as e:
-    logger.error(f"JSON Decode Error in club sheet: {e}")
-    logger.error(f"Response content: {club_sheet.client.last_response.content}")
-    existing_club_data = pd.DataFrame()
-except Exception as e:
-    logger.error(f"Unexpected error reading data from the club sheet: {e}")
-    existing_club_data = pd.DataFrame()
-    
-
-existing_elevation_data = pd.DataFrame(elevation_sheet.get_all_records())
-# existing_club_data = pd.DataFrame(club_sheet.get_all_records())
-
-# # Create separate dataframes for Club and Ramsay data
-elevation_leaderboard_df = activities[['name','start_date_local','distance','total_elevation_gain','simple_date','asterisk','QiC']].sort_values(by='total_elevation_gain',ascending=False)
-club_leaderboard_df = club_activities[['date','athlete','name','distance','moving_time','elapsed_time','total_elevation_gain']].sort_values(by='distance',ascending=False)
-
-# Concatenate new data to existing data
-if 'existing_elevation_data' in locals() and 'elevation_leaderboard_df' in locals():
-    updated_elevation_data = pd.concat([existing_elevation_data, elevation_leaderboard_df], ignore_index=True)
-    updated_elevation_data['distance'] = updated_elevation_data['distance'].apply(lambda x: round(x, 7) if pd.notnull(x) else x)
-    updated_elevation_data['total_elevation_gain'] = updated_elevation_data['total_elevation_gain'].apply(lambda x: round(x, 7) if pd.notnull(x) else x)
-
-else:
-    logging.error("One or both DataFrames are undefined.")
-
-updated_club_data = pd.concat([existing_club_data, club_leaderboard_df], ignore_index=True)
-
-# fix rounding issue on distance and elevlation gain
-club_leaderboard_df['distance'] = club_leaderboard_df['distance'].apply(lambda x: round(x, 7) if pd.notnull(x) else x)
-club_leaderboard_df['total_elevation_gain'] = club_leaderboard_df['total_elevation_gain'].apply(lambda x: round(x, 7) if pd.notnull(x) else x)
-
-# De-duplicate keeping latest
-updated_elevation_data = updated_elevation_data.drop_duplicates(subset=['name','start_date_local','total_elevation_gain'],keep='last')
-updated_club_data = updated_club_data.drop_duplicates(subset=['athlete','name','moving_time','elapsed_time','total_elevation_gain'],keep='last')
-
-logger.info(updated_elevation_data[updated_elevation_data.duplicated(subset=['name', 'simple_date','distance','total_elevation_gain'], keep=False)])
-logger.info(updated_club_data[updated_club_data.duplicated(subset=['athlete', 'name','distance','total_elevation_gain'], keep=False)])
-
-# Clear the sheets before uploading the updated data
-elevation_sheet.clear()
-club_sheet.clear()
-
-# Upload the updated dataframes back to the sheets
-set_with_dataframe(elevation_sheet, updated_elevation_data, include_index=False, include_column_header=True, resize=True)
-set_with_dataframe(club_sheet, updated_club_data, include_index=False, include_column_header=True, resize=True)
-
-logger.info('GetStrava.py has run')
+if __name__ == "__main__":
+    main()

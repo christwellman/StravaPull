@@ -10,5 +10,8 @@ MANIFEST
 # pyenv
 venv_StravaPull/
 
+#env    
+.env
+
 # DS_Store
 .DS_Store
